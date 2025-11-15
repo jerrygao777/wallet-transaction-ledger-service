@@ -254,7 +254,7 @@ curl -X POST http://localhost:8080/users/1/purchase \
 POST /users/:id/wager
 ```
 
-**Body:**
+**Body (all fields optional, at least one must be > 0):**
 ```json
 {
   "stake_gc": 500,
@@ -269,6 +269,19 @@ Or for Sweeps Coins:
   "payout_sc": 9
 }
 ```
+
+Or payout only:
+```json
+{
+  "payout_gc": 100
+}
+```
+
+Or any combination of the four fields. The endpoint supports maximum flexibility:
+- Stake only (user places bet)
+- Payout only (user receives winnings)
+- Both stake and payout (complete round)
+- Mixed currencies
 
 **Example:**
 ```bash

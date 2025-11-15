@@ -130,8 +130,8 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 	if stakeGC < 0 || payoutGC < 0 || stakeSC < 0 || payoutSC < 0 {
 		return fmt.Errorf("amounts cannot be negative")
 	}
-	if stakeGC == 0 && stakeSC == 0 {
-		return fmt.Errorf("must stake either GC or SC")
+	if stakeGC == 0 && payoutGC == 0 && stakeSC == 0 && payoutSC == 0 {
+		return fmt.Errorf("at least one amount must be greater than zero")
 	}
 
 	// Verify user exists
@@ -147,7 +147,7 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 	}
 	defer tx.Rollback()
 
-	// Handle Gold Coins wager
+	// Handle Gold Coins stake
 	if stakeGC > 0 {
 		gcBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencyGC)
 		if err != nil {
@@ -170,24 +170,29 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		if err != nil {
 			return err
 		}
+	}
 
-		// Create win transaction if there's a payout
-		if payoutGC > 0 {
-			winTx := &models.Transaction{
-				UserID:       userID,
-				Currency:     models.CurrencyGC,
-				Type:         models.TransactionTypeWinGC,
-				Amount:       payoutGC,
-				BalanceAfter: wagerTx.BalanceAfter + payoutGC,
-			}
-			err = s.repo.CreateTransaction(tx, winTx)
-			if err != nil {
-				return err
-			}
+	// Handle Gold Coins payout (independent of stake)
+	if payoutGC > 0 {
+		gcBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencyGC)
+		if err != nil {
+			return err
+		}
+
+		winTx := &models.Transaction{
+			UserID:       userID,
+			Currency:     models.CurrencyGC,
+			Type:         models.TransactionTypeWinGC,
+			Amount:       payoutGC,
+			BalanceAfter: gcBalance + payoutGC,
+		}
+		err = s.repo.CreateTransaction(tx, winTx)
+		if err != nil {
+			return err
 		}
 	}
 
-	// Handle Sweeps Coins wager
+	// Handle Sweeps Coins stake
 	if stakeSC > 0 {
 		scBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencySC)
 		if err != nil {
@@ -210,20 +215,25 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		if err != nil {
 			return err
 		}
+	}
 
-		// Create win transaction if there's a payout
-		if payoutSC > 0 {
-			winTx := &models.Transaction{
-				UserID:       userID,
-				Currency:     models.CurrencySC,
-				Type:         models.TransactionTypeWinSC,
-				Amount:       payoutSC,
-				BalanceAfter: wagerTx.BalanceAfter + payoutSC,
-			}
-			err = s.repo.CreateTransaction(tx, winTx)
-			if err != nil {
-				return err
-			}
+	// Handle Sweeps Coins payout (independent of stake)
+	if payoutSC > 0 {
+		scBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencySC)
+		if err != nil {
+			return err
+		}
+
+		winTx := &models.Transaction{
+			UserID:       userID,
+			Currency:     models.CurrencySC,
+			Type:         models.TransactionTypeWinSC,
+			Amount:       payoutSC,
+			BalanceAfter: scBalance + payoutSC,
+		}
+		err = s.repo.CreateTransaction(tx, winTx)
+		if err != nil {
+			return err
 		}
 	}
 
