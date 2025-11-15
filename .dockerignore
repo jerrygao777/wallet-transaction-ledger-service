@@ -1,0 +1,10 @@
+.env
+*.exe
+*.log
+wallet-ledger
+db-data
+vendor
+.git
+.idea
+.vscode
+**/node_modules

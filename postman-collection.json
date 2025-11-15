@@ -1,0 +1,354 @@
+{
+  "info": {
+    "name": "Wallet Ledger API",
+    "description": "API endpoints for testing the Wallet Transaction Ledger System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "List Available Packages",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/packages",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["packages"]
+        }
+      }
+    },
+    {
+      "name": "Get User with Balances",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1"]
+        }
+      }
+    },
+    {
+      "name": "List User Transactions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List User Transactions - Filter by Currency",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?currency=GC&limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "currency",
+              "value": "GC"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List User Transactions - Filter by Type",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?type=purchase&limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Purchase Starter Package",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"test-key-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/purchase",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "purchase"]
+        }
+      }
+    },
+    {
+      "name": "Purchase Grinder Package",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"package_code\": \"grinder_50k\",\n  \"idempotency_key\": \"test-key-002\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/purchase",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "purchase"]
+        }
+      }
+    },
+    {
+      "name": "Purchase HighRoller Package",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"package_code\": \"highroller_250k\",\n  \"idempotency_key\": \"test-key-003\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/purchase",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "purchase"]
+        }
+      }
+    },
+    {
+      "name": "Wager Gold Coins (Win)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 500,\n  \"payout_gc\": 900\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Wager Gold Coins (Lose)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 1000,\n  \"payout_gc\": 0\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Wager Sweeps Coins (Win)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_sc\": 5,\n  \"payout_sc\": 9\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Wager Sweeps Coins (Lose)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_sc\": 2,\n  \"payout_sc\": 0\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Redeem Sweeps Coins",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount_sc\": 10\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/redeem",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "redeem"]
+        }
+      }
+    },
+    {
+      "name": "Test Idempotency - Same Key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"test-key-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/purchase",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "purchase"]
+        }
+      }
+    },
+    {
+      "name": "Test User 2",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "2"]
+        }
+      }
+    },
+    {
+      "name": "Test User 3",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/3",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "3"]
+        }
+      }
+    }
+  ]
+}
