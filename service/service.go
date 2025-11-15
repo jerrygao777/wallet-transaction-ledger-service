@@ -125,7 +125,7 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 }
 
 // Wager handles a wager with stake and payout
-func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC int64) error {
+func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC int64, idempotencyKey string) error {
 	// Validate inputs
 	if stakeGC < 0 || payoutGC < 0 || stakeSC < 0 || payoutSC < 0 {
 		return fmt.Errorf("amounts cannot be negative")
@@ -146,6 +146,17 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		return err
 	}
 	defer tx.Rollback()
+
+	// Check idempotency
+	existingTxID, err := s.repo.CheckIdempotencyKey(tx, idempotencyKey, userID)
+	if err != nil {
+		return err
+	}
+	if existingTxID != nil {
+		// Already processed, return success
+		tx.Commit()
+		return nil
+	}
 
 	// Handle Gold Coins stake
 	if stakeGC > 0 {
@@ -237,12 +248,18 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		}
 	}
 
+	// Save idempotency key (use userID as transaction reference for wagers)
+	err = s.repo.SaveIdempotencyKey(tx, idempotencyKey, userID, userID)
+	if err != nil {
+		return err
+	}
+
 	// Commit transaction
 	return tx.Commit()
 }
 
 // Redeem handles redeeming Sweeps Coins
-func (s *WalletService) Redeem(userID int, amount int64) error {
+func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) error {
 	if amount <= 0 {
 		return fmt.Errorf("redemption amount must be positive")
 	}
@@ -259,6 +276,17 @@ func (s *WalletService) Redeem(userID int, amount int64) error {
 		return err
 	}
 	defer tx.Rollback()
+
+	// Check idempotency
+	existingTxID, err := s.repo.CheckIdempotencyKey(tx, idempotencyKey, userID)
+	if err != nil {
+		return err
+	}
+	if existingTxID != nil {
+		// Already processed, return success
+		tx.Commit()
+		return nil
+	}
 
 	// Get current balance
 	scBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencySC)
@@ -280,6 +308,12 @@ func (s *WalletService) Redeem(userID int, amount int64) error {
 	}
 
 	err = s.repo.CreateTransaction(tx, redeemTx)
+	if err != nil {
+		return err
+	}
+
+	// Save idempotency key
+	err = s.repo.SaveIdempotencyKey(tx, idempotencyKey, userID, redeemTx.ID)
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ A backend service that manages user wallets for two currencies: Gold Coins (GC) 
 
 - **Dual Currency System**: Gold Coins (play money) and Sweeps Coins (redeemable)
 - **Immutable Ledger**: All balance changes recorded as transactions
-- **Idempotent Purchases**: Duplicate requests safely handled
+- **Idempotency Protection**: All financial operations (purchase, wager, redeem) prevent duplicates
 - **Atomic Operations**: All multi-step operations in database transactions
 - **Cursor-based Pagination**: Efficient transaction history queries
 - **Clean Architecture**: Separated layers (handlers → services → repositories)
@@ -219,7 +219,7 @@ POST /users/:id/purchase
 ```json
 {
   "package_code": "starter_10k",
-  "idempotency_key": "unique-key-123"
+  "idempotency_key": "purchase-001"
 }
 ```
 
@@ -232,7 +232,7 @@ POST /users/:id/purchase
 ```bash
 curl -X POST http://localhost:8080/users/1/purchase \
   -H "Content-Type: application/json" \
-  -d '{"package_code":"starter_10k","idempotency_key":"key-001"}'
+  -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
 ```
 
 **Response:**
@@ -258,7 +258,8 @@ POST /users/:id/wager
 ```json
 {
   "stake_gc": 500,
-  "payout_gc": 900
+  "payout_gc": 900,
+  "idempotency_key": "wager-001"
 }
 ```
 
@@ -266,14 +267,16 @@ Or for Sweeps Coins:
 ```json
 {
   "stake_sc": 5,
-  "payout_sc": 9
+  "payout_sc": 9,
+  "idempotency_key": "wager-002"
 }
 ```
 
 Or payout only:
 ```json
 {
-  "payout_gc": 100
+  "payout_gc": 100,
+  "idempotency_key": "wager-003"
 }
 ```
 
@@ -283,11 +286,13 @@ Or any combination of the four fields. The endpoint supports maximum flexibility
 - Both stake and payout (complete round)
 - Mixed currencies
 
+**Note**: `idempotency_key` is required to prevent duplicate wagers.
+
 **Example:**
 ```bash
 curl -X POST http://localhost:8080/users/1/wager \
   -H "Content-Type: application/json" \
-  -d '{"stake_gc":500,"payout_gc":900}'
+  -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-001"}'
 ```
 
 **Response:**
@@ -306,15 +311,18 @@ POST /users/:id/redeem
 **Body:**
 ```json
 {
-  "amount_sc": 10
+  "amount_sc": 10,
+  "idempotency_key": "redeem-001"
 }
 ```
+
+**Note**: `idempotency_key` is required to prevent duplicate redemptions.
 
 **Example:**
 ```bash
 curl -X POST http://localhost:8080/users/1/redeem \
   -H "Content-Type: application/json" \
-  -d '{"amount_sc":10}'
+  -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
 ```
 
 **Response:**
@@ -338,7 +346,7 @@ curl http://localhost:8080/users/1
 # 3. Purchase a starter package
 curl -X POST http://localhost:8080/users/1/purchase \
   -H "Content-Type: application/json" \
-  -d '{"package_code":"starter_10k","idempotency_key":"test-001"}'
+  -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
 
 # 4. Check updated balance
 curl http://localhost:8080/users/1
@@ -346,7 +354,7 @@ curl http://localhost:8080/users/1
 # 5. Place a wager with Gold Coins
 curl -X POST http://localhost:8080/users/1/wager \
   -H "Content-Type: application/json" \
-  -d '{"stake_gc":500,"payout_gc":900}'
+  -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-001"}'
 
 # 6. View transaction history
 curl "http://localhost:8080/users/1/transactions?limit=10"
@@ -354,17 +362,17 @@ curl "http://localhost:8080/users/1/transactions?limit=10"
 # 7. Purchase with Sweeps Coins
 curl -X POST http://localhost:8080/users/1/purchase \
   -H "Content-Type: application/json" \
-  -d '{"package_code":"grinder_50k","idempotency_key":"test-002"}'
+  -d '{"package_code":"grinder_50k","idempotency_key":"purchase-002"}'
 
 # 8. Wager with Sweeps Coins
 curl -X POST http://localhost:8080/users/1/wager \
   -H "Content-Type: application/json" \
-  -d '{"stake_sc":5,"payout_sc":9}'
+  -d '{"stake_sc":5,"payout_sc":9,"idempotency_key":"wager-002"}'
 
 # 9. Redeem Sweeps Coins
 curl -X POST http://localhost:8080/users/1/redeem \
   -H "Content-Type: application/json" \
-  -d '{"amount_sc":10}'
+  -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
 
 # 10. Check final balances
 curl http://localhost:8080/users/1
@@ -376,7 +384,7 @@ curl http://localhost:8080/users/1
 All balances are calculated from the transaction ledger, not stored separately. The `balance_after` field in each transaction provides a running total for auditing.
 
 ### Idempotency
-Purchase requests use idempotency keys to prevent duplicate charges. The same key returns the original transaction without creating duplicates.
+All financial operations (purchase, wager, redeem) require idempotency keys to prevent duplicate transactions. Submitting the same key returns success without creating duplicates. Keys are automatically cleaned up after 24 hours.
 
 ### Atomicity
 All balance-changing operations use database transactions with `SELECT FOR UPDATE` to prevent race conditions and ensure consistency.

@@ -34,7 +34,7 @@ Content-Type: application/json
 
 {
   "package_code": "starter_10k",
-  "idempotency_key": "test-key-001"
+  "idempotency_key": "purchase-001"
 }
 
 ###
@@ -45,7 +45,7 @@ Content-Type: application/json
 
 {
   "package_code": "grinder_50k",
-  "idempotency_key": "test-key-002"
+  "idempotency_key": "purchase-002"
 }
 
 ###
@@ -56,7 +56,7 @@ Content-Type: application/json
 
 {
   "package_code": "highroller_250k",
-  "idempotency_key": "test-key-003"
+  "idempotency_key": "purchase-003"
 }
 
 ###
@@ -67,7 +67,8 @@ Content-Type: application/json
 
 {
   "stake_gc": 500,
-  "payout_gc": 900
+  "payout_gc": 900,
+  "idempotency_key": "wager-gc-win-001"
 }
 
 ###
@@ -78,7 +79,8 @@ Content-Type: application/json
 
 {
   "stake_gc": 1000,
-  "payout_gc": 0
+  "payout_gc": 0,
+  "idempotency_key": "wager-gc-lose-001"
 }
 
 ###
@@ -89,7 +91,8 @@ Content-Type: application/json
 
 {
   "stake_sc": 5,
-  "payout_sc": 9
+  "payout_sc": 9,
+  "idempotency_key": "wager-sc-win-001"
 }
 
 ###
@@ -100,7 +103,8 @@ Content-Type: application/json
 
 {
   "stake_sc": 2,
-  "payout_sc": 0
+  "payout_sc": 0,
+  "idempotency_key": "wager-sc-lose-001"
 }
 
 ###
@@ -110,18 +114,42 @@ POST http://localhost:8080/users/1/redeem
 Content-Type: application/json
 
 {
-  "amount_sc": 10
+  "amount_sc": 10,
+  "idempotency_key": "redeem-001"
 }
 
 ###
 
-### Test Idempotency - Same Key
+### Test Idempotency - Purchase Same Key
 POST http://localhost:8080/users/1/purchase
 Content-Type: application/json
 
 {
   "package_code": "starter_10k",
-  "idempotency_key": "test-key-001"
+  "idempotency_key": "purchase-001"
+}
+
+###
+
+### Test Idempotency - Wager Same Key
+POST http://localhost:8080/users/1/wager
+Content-Type: application/json
+
+{
+  "stake_gc": 500,
+  "payout_gc": 900,
+  "idempotency_key": "wager-gc-win-001"
+}
+
+###
+
+### Test Idempotency - Redeem Same Key
+POST http://localhost:8080/users/1/redeem
+Content-Type: application/json
+
+{
+  "amount_sc": 10,
+  "idempotency_key": "redeem-001"
 }
 
 ###

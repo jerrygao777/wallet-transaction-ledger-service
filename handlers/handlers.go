@@ -37,15 +37,17 @@ type PurchaseRequest struct {
 
 // WagerRequest represents a wager request
 type WagerRequest struct {
-	StakeGC  int64 `json:"stake_gc,omitempty"`
-	PayoutGC int64 `json:"payout_gc,omitempty"`
-	StakeSC  int64 `json:"stake_sc,omitempty"`
-	PayoutSC int64 `json:"payout_sc,omitempty"`
+	StakeGC        int64  `json:"stake_gc,omitempty"`
+	PayoutGC       int64  `json:"payout_gc,omitempty"`
+	StakeSC        int64  `json:"stake_sc,omitempty"`
+	PayoutSC       int64  `json:"payout_sc,omitempty"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 // RedeemRequest represents a redeem request
 type RedeemRequest struct {
-	AmountSC int64 `json:"amount_sc"`
+	AmountSC       int64  `json:"amount_sc"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 // GetUser handles GET /users/:id
@@ -184,7 +186,12 @@ func (h *Handler) Wager(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Wager(userID, req.StakeGC, req.PayoutGC, req.StakeSC, req.PayoutSC)
+	if req.IdempotencyKey == "" {
+		respondError(w, http.StatusBadRequest, "idempotency_key is required")
+		return
+	}
+
+	err = h.service.Wager(userID, req.StakeGC, req.PayoutGC, req.StakeSC, req.PayoutSC, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing wager: %v", err)
 
@@ -220,7 +227,12 @@ func (h *Handler) Redeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Redeem(userID, req.AmountSC)
+	if req.IdempotencyKey == "" {
+		respondError(w, http.StatusBadRequest, "idempotency_key is required")
+		return
+	}
+
+	err = h.service.Redeem(userID, req.AmountSC, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing redemption: %v", err)
 

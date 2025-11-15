@@ -127,7 +127,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"test-key-001\"\n}"
+          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"purchase-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/purchase",
@@ -150,7 +150,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"package_code\": \"grinder_50k\",\n  \"idempotency_key\": \"test-key-002\"\n}"
+          "raw": "{\n  \"package_code\": \"grinder_50k\",\n  \"idempotency_key\": \"purchase-002\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/purchase",
@@ -173,7 +173,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"package_code\": \"highroller_250k\",\n  \"idempotency_key\": \"test-key-003\"\n}"
+          "raw": "{\n  \"package_code\": \"highroller_250k\",\n  \"idempotency_key\": \"purchase-003\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/purchase",
@@ -196,7 +196,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"stake_gc\": 500,\n  \"payout_gc\": 900\n}"
+          "raw": "{\n  \"stake_gc\": 500,\n  \"payout_gc\": 900,\n  \"idempotency_key\": \"wager-gc-win-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/wager",
@@ -219,7 +219,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"stake_gc\": 1000,\n  \"payout_gc\": 0\n}"
+          "raw": "{\n  \"stake_gc\": 1000,\n  \"payout_gc\": 0,\n  \"idempotency_key\": \"wager-gc-lose-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/wager",
@@ -242,7 +242,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"stake_sc\": 5,\n  \"payout_sc\": 9\n}"
+          "raw": "{\n  \"stake_sc\": 5,\n  \"payout_sc\": 9,\n  \"idempotency_key\": \"wager-sc-win-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/wager",
@@ -265,7 +265,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"stake_sc\": 2,\n  \"payout_sc\": 0\n}"
+          "raw": "{\n  \"stake_sc\": 2,\n  \"payout_sc\": 0,\n  \"idempotency_key\": \"wager-sc-lose-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/wager",
@@ -288,7 +288,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"amount_sc\": 10\n}"
+          "raw": "{\n  \"amount_sc\": 10,\n  \"idempotency_key\": \"redeem-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/redeem",
@@ -300,7 +300,7 @@
       }
     },
     {
-      "name": "Test Idempotency - Same Key",
+      "name": "Test Idempotency - Purchase Same Key",
       "request": {
         "method": "POST",
         "header": [
@@ -311,7 +311,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"test-key-001\"\n}"
+          "raw": "{\n  \"package_code\": \"starter_10k\",\n  \"idempotency_key\": \"purchase-001\"\n}"
         },
         "url": {
           "raw": "http://localhost:8080/users/1/purchase",
@@ -319,6 +319,52 @@
           "host": ["localhost"],
           "port": "8080",
           "path": ["users", "1", "purchase"]
+        }
+      }
+    },
+    {
+      "name": "Test Idempotency - Wager Same Key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 500,\n  \"payout_gc\": 900,\n  \"idempotency_key\": \"wager-gc-win-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Test Idempotency - Redeem Same Key",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount_sc\": 10,\n  \"idempotency_key\": \"redeem-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/redeem",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "redeem"]
         }
       }
     },
