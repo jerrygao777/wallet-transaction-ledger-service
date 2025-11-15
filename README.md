@@ -479,6 +479,92 @@ This separation ensures:
 - Maintainable codebase
 - Flexible infrastructure changes
 
+## Testing the API
+
+There are three ways to test the API endpoints. Choose the method that works best for you:
+
+### Option 1: VS Code REST Client (Recommended for Development)
+
+The easiest way to test if you're using VS Code:
+
+1. Install the **REST Client** extension in VS Code
+2. Open `api-requests.http` in the project
+3. Click "Send Request" above any HTTP request
+4. View responses directly in VS Code
+
+**Pros:**
+- No additional tools needed
+- Fast and integrated with your editor
+- All requests pre-configured
+- Easy to modify and test
+
+### Option 2: Postman (Best for GUI Users)
+
+For those who prefer a graphical interface:
+
+1. Download and install [Postman](https://www.postman.com/downloads/)
+2. Import `postman-collection.json` from the project
+3. All 17 API endpoints will be loaded
+4. Click any request and hit "Send"
+5. Use Collection Runner to execute all tests sequentially
+
+**Pros:**
+- User-friendly GUI
+- Great visualization of responses
+- Can save and organize requests
+- Supports automated testing
+
+### Option 3: curl (Best for Command Line)
+
+For terminal/command line testing:
+
+**Linux/Mac/Git Bash:**
+```bash
+# Use the provided script
+bash curl-examples.sh
+
+# Or run individual commands
+curl http://localhost:8080/health
+```
+
+**Windows PowerShell:**
+```powershell
+# Test health endpoint
+Invoke-RestMethod -Uri "http://localhost:8080/health"
+
+# Purchase package
+$body = @{ package_code = "starter_10k"; idempotency_key = "test-001" } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8080/users/1/purchase" -Method Post -Body $body -ContentType "application/json"
+```
+
+**Pros:**
+- No installation needed (built into most systems)
+- Easy to script and automate
+- Works on any platform
+- Can be used in CI/CD pipelines
+
+## Additional Features
+
+- **Graceful Shutdown**: Handles SIGINT/SIGTERM signals properly
+- **Background Cleanup**: Automatically cleans up old idempotency keys (24+ hours old) every hour
+- **Connection Pooling**: Configured for optimal database performance
+- **Input Validation**: Currency, transaction type, and limit parameters are validated
+- **Logging**: Request logging middleware for debugging and monitoring
+
+## Production Considerations
+
+For production deployment, consider:
+- Add authentication/authorization
+- Implement rate limiting
+- Add monitoring/metrics (Prometheus, Datadog, etc.)
+- Set up structured logging (zerolog, zap)
+- Configure TLS/HTTPS
+- Add health checks for dependencies
+- Implement circuit breakers for external services
+- Set up automated backups for PostgreSQL
+- Add comprehensive unit and integration tests
+- Implement API versioning
+
 ## License
 
 MIT
