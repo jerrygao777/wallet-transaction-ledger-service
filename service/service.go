@@ -180,10 +180,10 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 
 	// Validate inputs
 	if stakeGC < 0 || payoutGC < 0 || stakeSC < 0 || payoutSC < 0 {
-		return nil, fmt.Errorf("amounts cannot be negative")
+		return nil, fmt.Errorf("amounts cannot be negative: %w", ErrInvalidInput)
 	}
 	if stakeGC == 0 && payoutGC == 0 && stakeSC == 0 && payoutSC == 0 {
-		return nil, fmt.Errorf("at least one amount must be greater than zero")
+		return nil, fmt.Errorf("at least one amount must be greater than zero: %w", ErrInvalidInput)
 	}
 
 	// Verify user exists
@@ -342,7 +342,7 @@ func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) 
 	defer s.unlockUser(userID)
 
 	if amount <= 0 {
-		return nil, fmt.Errorf("redemption amount must be positive")
+		return nil, fmt.Errorf("redemption amount must be positive: %w", ErrInvalidInput)
 	}
 
 	// Verify user exists
