@@ -182,6 +182,7 @@ func (r *Repository) CheckIdempotencyKey(tx *sql.Tx, key string, userID int) ([]
 		SELECT transaction_ids 
 		FROM idempotency_keys 
 		WHERE key = $1 AND user_id = $2
+		FOR UPDATE
 	`, key, userID).Scan(&transactionIDs)
 
 	if err == sql.ErrNoRows {
