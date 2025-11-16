@@ -221,9 +221,13 @@ func (r *Repository) ListTransactions(userID int, cursor *string, limit int, txT
 		cursorID, cursorTime, err := decodeCursor(*cursor)
 		if err == nil {
 			argCount++
-			query += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)", argCount, argCount+1)
-			args = append(args, cursorTime, cursorID)
+			timeArg := argCount
 			argCount++
+			idArg := argCount
+			// Proper cursor pagination: (timestamp, id) < (cursor_timestamp, cursor_id)
+			// This handles cases where multiple transactions have the same timestamp
+			query += fmt.Sprintf(" AND (created_at < $%d OR (created_at = $%d AND id < $%d))", timeArg, timeArg, idArg)
+			args = append(args, cursorTime, cursorID)
 		}
 	}
 
@@ -270,7 +274,8 @@ func (r *Repository) ListTransactions(userID int, cursor *string, limit int, txT
 
 // encodeCursor creates a cursor from transaction ID and timestamp
 func encodeCursor(id int, createdAt time.Time) string {
-	cursorData := fmt.Sprintf("%d:%d", id, createdAt.Unix())
+	// Use RFC3339Nano to preserve microsecond precision
+	cursorData := fmt.Sprintf("%d:%s", id, createdAt.Format(time.RFC3339Nano))
 	return base64.URLEncoding.EncodeToString([]byte(cursorData))
 }
 
@@ -281,7 +286,8 @@ func decodeCursor(cursor string) (int, time.Time, error) {
 		return 0, time.Time{}, err
 	}
 
-	parts := strings.Split(string(data), ":")
+	// Split only on the first colon to separate ID from timestamp (timestamp contains colons)
+	parts := strings.SplitN(string(data), ":", 2)
 	if len(parts) != 2 {
 		return 0, time.Time{}, fmt.Errorf("invalid cursor format")
 	}
@@ -291,12 +297,12 @@ func decodeCursor(cursor string) (int, time.Time, error) {
 		return 0, time.Time{}, err
 	}
 
-	timestamp, err := strconv.ParseInt(parts[1], 10, 64)
+	timestamp, err := time.Parse(time.RFC3339Nano, parts[1])
 	if err != nil {
 		return 0, time.Time{}, err
 	}
 
-	return id, time.Unix(timestamp, 0), nil
+	return id, timestamp, nil
 }
 
 // CleanupOldIdempotencyKeys removes idempotency keys older than 24 hours
