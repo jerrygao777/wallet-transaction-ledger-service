@@ -90,27 +90,7 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 		return nil, err
 	}
 
-	// Create SC transaction
-	scBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencySC)
-	if err != nil {
-		return nil, err
-	}
-
-	scTx := &models.Transaction{
-		UserID:       userID,
-		Currency:     models.CurrencySC,
-		Type:         models.TransactionTypePurchase,
-		Amount:       pkg.SweepCoins,
-		BalanceAfter: scBalance + pkg.SweepCoins,
-		Metadata:     metadataJSON,
-	}
-
-	err = s.repo.CreateTransaction(tx, scTx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update wallet balances
+	// Update wallet balances (GC purchased, SC given as bonus)
 	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, pkg.GoldCoins)
 	if err != nil {
 		return nil, err
