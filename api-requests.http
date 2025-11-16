@@ -109,6 +109,42 @@ Content-Type: application/json
 
 ###
 
+### Wager - Payout Only GC
+POST http://localhost:8080/users/1/wager
+Content-Type: application/json
+
+{
+  "payout_gc": 1000,
+  "idempotency_key": "wager-payout-gc-001"
+}
+
+###
+
+### Wager - Payout Only SC
+POST http://localhost:8080/users/1/wager
+Content-Type: application/json
+
+{
+  "payout_sc": 5,
+  "idempotency_key": "wager-payout-sc-001"
+}
+
+###
+
+### Wager - All Currencies (complex settlement)
+POST http://localhost:8080/users/1/wager
+Content-Type: application/json
+
+{
+  "stake_gc": 50,
+  "payout_gc": 75,
+  "stake_sc": 1,
+  "payout_sc": 2,
+  "idempotency_key": "wager-all-001"
+}
+
+###
+
 ### Redeem Sweeps Coins
 POST http://localhost:8080/users/1/redeem
 Content-Type: application/json

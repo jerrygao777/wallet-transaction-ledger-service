@@ -59,6 +59,21 @@ curl -X POST http://localhost:8080/users/1/wager \
   -H "Content-Type: application/json" \
   -d '{"stake_sc":2,"payout_sc":0,"idempotency_key":"wager-sc-lose-001"}'
 
+# Wager - Payout Only GC
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"payout_gc":1000,"idempotency_key":"wager-payout-gc-001"}'
+
+# Wager - Payout Only SC
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"payout_sc":5,"idempotency_key":"wager-payout-sc-001"}'
+
+# Wager - All Currencies (complex settlement)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"stake_gc":50,"payout_gc":75,"stake_sc":1,"payout_sc":2,"idempotency_key":"wager-all-001"}'
+
 # Redeem Sweeps Coins
 curl -X POST http://localhost:8080/users/1/redeem \
   -H "Content-Type: application/json" \

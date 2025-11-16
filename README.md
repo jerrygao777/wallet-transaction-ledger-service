@@ -242,7 +242,7 @@ Or any combination of the four fields. The endpoint supports maximum flexibility
 - Stake only (user places bet)
 - Payout only (user receives winnings)
 - Both stake and payout (complete round)
-- Mixed currencies
+- All four fields (complex multi-currency settlement)
 
 **Note**: `idempotency_key` is required to prevent duplicate wagers.
 
@@ -482,7 +482,7 @@ wallet-ledger/
 
 **Windows PowerShell:**
 ```powershell
-# Run the comprehensive test suite (23 tests including idempotency)
+# Run the comprehensive test suite (32 tests including idempotency)
 .\test-examples.ps1
 
 # If you get permission error, run once:

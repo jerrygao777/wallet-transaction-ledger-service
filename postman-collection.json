@@ -277,6 +277,75 @@
       }
     },
     {
+      "name": "Wager - Payout Only GC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payout_gc\": 1000,\n  \"idempotency_key\": \"wager-payout-gc-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Wager - Payout Only SC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payout_sc\": 5,\n  \"idempotency_key\": \"wager-payout-sc-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Wager - All Currencies (complex settlement)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 50,\n  \"payout_gc\": 75,\n  \"stake_sc\": 1,\n  \"payout_sc\": 2,\n  \"idempotency_key\": \"wager-all-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
       "name": "Redeem Sweeps Coins",
       "request": {
         "method": "POST",

@@ -66,6 +66,24 @@ $body = @{ stake_sc = 2; payout_sc = 0; idempotency_key = "wager-sc-lose-001" } 
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
 
+# Wager - Payout Only GC (Free Spins/Bonus)
+Write-Host "11a. Wager - Payout Only GC (payout 1000, no stake)" -ForegroundColor Yellow
+$body = @{ payout_gc = 1000; idempotency_key = "wager-payout-gc-001" } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
+Write-Host ""
+
+# Wager - Payout Only SC
+Write-Host "11b. Wager - Payout Only SC (payout 5, no stake)" -ForegroundColor Yellow
+$body = @{ payout_sc = 5; idempotency_key = "wager-payout-sc-001" } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
+Write-Host ""
+
+# Wager - All Four Fields (complex settlement)
+Write-Host "11c. Wager - All Currencies (GC stake+payout, SC stake+payout)" -ForegroundColor Yellow
+$body = @{ stake_gc = 50; payout_gc = 75; stake_sc = 1; payout_sc = 2; idempotency_key = "wager-all-001" } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
+Write-Host ""
+
 # Check Balance After Wagers
 Write-Host "12. Check Balance After Wagers" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/1"
