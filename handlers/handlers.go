@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,10 +19,14 @@ const (
 
 type Handler struct {
 	service *service.WalletService
+	repo    interface{ Ping() error }
 }
 
-func New(service *service.WalletService) *Handler {
-	return &Handler{service: service}
+func New(service *service.WalletService, repo interface{ Ping() error }) *Handler {
+	return &Handler{
+		service: service,
+		repo:    repo,
+	}
 }
 
 // ErrorResponse represents an error response
@@ -165,7 +170,14 @@ func (h *Handler) Purchase(w http.ResponseWriter, r *http.Request) {
 	transaction, err := h.service.Purchase(userID, req.PackageCode, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing purchase: %v", err)
-		respondError(w, http.StatusBadRequest, err.Error())
+
+		// Check if it's a business logic error
+		if errors.Is(err, service.ErrInvalidPackage) {
+			respondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		respondError(w, http.StatusInternalServerError, "failed to process purchase")
 		return
 	}
 
@@ -195,8 +207,8 @@ func (h *Handler) Wager(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error processing wager: %v", err)
 
-		// Check if it's an insufficient funds error
-		if err.Error()[:11] == "insufficient" || err.Error()[:4] == "must" || err.Error()[:7] == "amounts" {
+		// Check if it's a business logic error (insufficient funds, invalid input)
+		if errors.Is(err, service.ErrInsufficientFunds) || errors.Is(err, service.ErrInvalidInput) {
 			respondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -236,8 +248,8 @@ func (h *Handler) Redeem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error processing redemption: %v", err)
 
-		// Check if it's an insufficient funds error
-		if len(err.Error()) > 11 && err.Error()[:11] == "insufficient" {
+		// Check if it's a business logic error (insufficient funds, invalid input)
+		if errors.Is(err, service.ErrInsufficientFunds) || errors.Is(err, service.ErrInvalidInput) {
 			respondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -262,6 +274,12 @@ func respondError(w http.ResponseWriter, status int, message string) {
 
 // HealthCheck handles GET /health
 func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	// Check database connectivity
+	if err := h.repo.Ping(); err != nil {
+		respondError(w, http.StatusServiceUnavailable, "database unavailable")
+		return
+	}
+
 	respondJSON(w, http.StatusOK, map[string]string{
 		"status": "healthy",
 	})

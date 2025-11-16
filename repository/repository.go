@@ -19,9 +19,41 @@ func New(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
+// Ping checks if the database connection is alive
+func (r *Repository) Ping() error {
+	return r.db.Ping()
+}
+
 // BeginTx starts a new database transaction
 func (r *Repository) BeginTx() (*sql.Tx, error) {
 	return r.db.Begin()
+}
+
+// UpdateWalletBalance updates the balance for a specific currency atomically
+func (r *Repository) UpdateWalletBalance(tx *sql.Tx, userID int, currency models.Currency, delta int64) error {
+	var column string
+	if currency == models.CurrencyGC {
+		column = "gold_balance"
+	} else {
+		column = "sweeps_balance"
+	}
+
+	_, err := tx.Exec(fmt.Sprintf(`
+		UPDATE users
+		SET %s = %s + $1
+		WHERE id = $2
+	`, column, column), delta, userID)
+	return err
+}
+
+// UpdateWalletStat updates a specific wallet statistic atomically
+func (r *Repository) UpdateWalletStat(tx *sql.Tx, userID int, statColumn string, delta int64) error {
+	_, err := tx.Exec(fmt.Sprintf(`
+		UPDATE users
+		SET %s = %s + $1
+		WHERE id = $2
+	`, statColumn, statColumn), delta, userID)
+	return err
 }
 
 // GetUser retrieves a user by ID
@@ -42,78 +74,57 @@ func (r *Repository) GetUser(userID int) (*models.User, error) {
 	return &user, nil
 }
 
-// GetUserWithBalances retrieves a user with their balances and stats
+// GetUserWithBalances retrieves a user with their balances and stats from the wallet
 func (r *Repository) GetUserWithBalances(userID int) (*models.UserWithBalances, error) {
-	user, err := r.GetUser(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &models.UserWithBalances{
-		User: *user,
-	}
-
-	// Calculate Gold Coin balance
-	err = r.db.QueryRow(`
-		SELECT COALESCE(balance_after, 0)
-		FROM transactions
-		WHERE user_id = $1 AND currency = 'GC'
-		ORDER BY id DESC
-		LIMIT 1
-	`, userID).Scan(&result.GoldBalance)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	// Calculate Sweeps Coin balance
-	err = r.db.QueryRow(`
-		SELECT COALESCE(balance_after, 0)
-		FROM transactions
-		WHERE user_id = $1 AND currency = 'SC'
-		ORDER BY id DESC
-		LIMIT 1
-	`, userID).Scan(&result.SweepsBalance)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	// Calculate stats
-	err = r.db.QueryRow(`
-		SELECT 
-			COALESCE(SUM(CASE WHEN type = 'wager_gc' THEN amount ELSE 0 END), 0) as total_gc_wagered,
-			COALESCE(SUM(CASE WHEN type = 'win_gc' THEN amount ELSE 0 END), 0) as total_gc_won,
-			COALESCE(SUM(CASE WHEN type = 'wager_sc' THEN amount ELSE 0 END), 0) as total_sc_wagered,
-			COALESCE(SUM(CASE WHEN type = 'win_sc' THEN amount ELSE 0 END), 0) as total_sc_won,
-			COALESCE(SUM(CASE WHEN type = 'redeem_sc' THEN amount ELSE 0 END), 0) as total_sc_redeemed
-		FROM transactions
-		WHERE user_id = $1
+	var result models.UserWithBalances
+	err := r.db.QueryRow(`
+		SELECT id, username, created_at,
+		       gold_balance, sweeps_balance,
+		       total_gc_wagered, total_gc_won,
+		       total_sc_wagered, total_sc_won, total_sc_redeemed
+		FROM users
+		WHERE id = $1
 	`, userID).Scan(
+		&result.ID,
+		&result.Username,
+		&result.CreatedAt,
+		&result.GoldBalance,
+		&result.SweepsBalance,
 		&result.TotalGCWagered,
 		&result.TotalGCWon,
 		&result.TotalSCWagered,
 		&result.TotalSCWon,
 		&result.TotalSCRedeemed,
 	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found")
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return &result, nil
 }
 
-// GetCurrentBalance returns the current balance for a user and currency
+// GetCurrentBalance returns the current balance for a user and currency from the wallet
 func (r *Repository) GetCurrentBalance(tx *sql.Tx, userID int, currency models.Currency) (int64, error) {
 	var balance int64
-	query := `
-		SELECT COALESCE(balance_after, 0)
-		FROM transactions
-		WHERE user_id = $1 AND currency = $2
-		ORDER BY id DESC
-		LIMIT 1
-		FOR UPDATE
-	`
+	var column string
+	if currency == models.CurrencyGC {
+		column = "gold_balance"
+	} else {
+		column = "sweeps_balance"
+	}
 
-	err := tx.QueryRow(query, userID, currency).Scan(&balance)
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM users
+		WHERE id = $1
+		FOR UPDATE
+	`, column)
+
+	err := tx.QueryRow(query, userID).Scan(&balance)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}

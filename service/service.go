@@ -36,7 +36,7 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 	// Validate package
 	pkg, ok := models.Packages[packageCode]
 	if !ok {
-		return nil, fmt.Errorf("invalid package code: %s", packageCode)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidPackage, packageCode)
 	}
 
 	// Verify user exists
@@ -110,6 +110,17 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 		return nil, err
 	}
 
+	// Update wallet balances
+	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, pkg.GoldCoins)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, pkg.SweepCoins)
+	if err != nil {
+		return nil, err
+	}
+
 	// Save idempotency key (using GC transaction ID as reference)
 	err = s.repo.SaveIdempotencyKey(tx, idempotencyKey, userID, gcTx.ID)
 	if err != nil {
@@ -166,7 +177,7 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		}
 
 		if gcBalance < stakeGC {
-			return fmt.Errorf("insufficient gold coins: have %d, need %d", gcBalance, stakeGC)
+			return fmt.Errorf("%w: gold coins - have %d, need %d", ErrInsufficientFunds, gcBalance, stakeGC)
 		}
 
 		// Create wager transaction
@@ -178,6 +189,16 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 			BalanceAfter: gcBalance - stakeGC,
 		}
 		err = s.repo.CreateTransaction(tx, wagerTx)
+		if err != nil {
+			return err
+		}
+
+		// Update wallet balance and stats
+		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, -stakeGC)
+		if err != nil {
+			return err
+		}
+		err = s.repo.UpdateWalletStat(tx, userID, "total_gc_wagered", stakeGC)
 		if err != nil {
 			return err
 		}
@@ -201,6 +222,16 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		if err != nil {
 			return err
 		}
+
+		// Update wallet balance and stats
+		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, payoutGC)
+		if err != nil {
+			return err
+		}
+		err = s.repo.UpdateWalletStat(tx, userID, "total_gc_won", payoutGC)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Handle Sweeps Coins stake
@@ -211,7 +242,7 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		}
 
 		if scBalance < stakeSC {
-			return fmt.Errorf("insufficient sweeps coins: have %d, need %d", scBalance, stakeSC)
+			return fmt.Errorf("%w: sweeps coins - have %d, need %d", ErrInsufficientFunds, scBalance, stakeSC)
 		}
 
 		// Create wager transaction
@@ -223,6 +254,16 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 			BalanceAfter: scBalance - stakeSC,
 		}
 		err = s.repo.CreateTransaction(tx, wagerTx)
+		if err != nil {
+			return err
+		}
+
+		// Update wallet balance and stats
+		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, -stakeSC)
+		if err != nil {
+			return err
+		}
+		err = s.repo.UpdateWalletStat(tx, userID, "total_sc_wagered", stakeSC)
 		if err != nil {
 			return err
 		}
@@ -243,6 +284,16 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 			BalanceAfter: scBalance + payoutSC,
 		}
 		err = s.repo.CreateTransaction(tx, winTx)
+		if err != nil {
+			return err
+		}
+
+		// Update wallet balance and stats
+		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, payoutSC)
+		if err != nil {
+			return err
+		}
+		err = s.repo.UpdateWalletStat(tx, userID, "total_sc_won", payoutSC)
 		if err != nil {
 			return err
 		}
@@ -295,7 +346,7 @@ func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) 
 	}
 
 	if scBalance < amount {
-		return fmt.Errorf("insufficient sweeps coins: have %d, need %d", scBalance, amount)
+		return fmt.Errorf("%w: sweeps coins - have %d, need %d", ErrInsufficientFunds, scBalance, amount)
 	}
 
 	// Create redeem transaction
@@ -308,6 +359,16 @@ func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) 
 	}
 
 	err = s.repo.CreateTransaction(tx, redeemTx)
+	if err != nil {
+		return err
+	}
+
+	// Update wallet balance and stats
+	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, -amount)
+	if err != nil {
+		return err
+	}
+	err = s.repo.UpdateWalletStat(tx, userID, "total_sc_redeemed", amount)
 	if err != nil {
 		return err
 	}

@@ -57,7 +57,7 @@ func main() {
 	// Initialize layers
 	repo := repository.New(db)
 	svc := service.New(repo)
-	handler := handlers.New(svc)
+	handler := handlers.New(svc, repo)
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

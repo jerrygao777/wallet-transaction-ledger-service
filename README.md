@@ -42,73 +42,61 @@ wallet-ledger/
 
 ### Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL 12 or higher
+**To run this project, you only need:**
+- **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop/)
 
-### 1. Setup Database
+**That's it!** No need to install Go, PostgreSQL, or any dependencies. Everything runs in containers.
 
+> **Note**: If you prefer running without Docker, see the "Run Manually (Advanced)" section below which requires Go 1.21+ and PostgreSQL 12+.
+
+### Run with Docker (Recommended)
+
+**1. Clone the repository:**
 ```bash
-# Create database
-psql -U postgres -c "CREATE DATABASE wallet_ledger;"
-
-# Run migrations
-psql -U postgres -d wallet_ledger -f migrations/001_init.sql
+git clone https://github.com/jerrygao777/wallet-transaction-ledger-service.git
+cd wallet-transaction-ledger-service
 ```
 
-### 2. Configure Environment
-
-```bash
-# Copy example env file
-cp .env.example .env
-
-# Edit .env with your database credentials
-# DATABASE_URL=postgres://postgres:postgres@localhost:5432/wallet_ledger?sslmode=disable
-# PORT=8080
-```
-
-### 3. Install Dependencies
-
-```bash
-go mod download
-```
-
-### 4. Run the Server
-
-```bash
-go run main.go
-```
-
-The server will start on `http://localhost:8080`
-
-## Run with Docker
-
-This project includes a `Dockerfile` and `docker-compose.yml` so you can run the app and Postgres locally without installing Postgres manually.
-
-Note: Docker Desktop must be installed and running on your machine.
-
-Start everything with:
-
+**2. Start the application:**
 ```bash
 docker-compose up --build
 ```
 
-This will:
-- Start a Postgres container and initialize the database using the SQL files in `./migrations` (mounted into the container so Postgres runs them on first start).
-- Build the Go application image and run it, exposing port 8080 on the host.
+**3. Access the API at `http://localhost:8080`**
 
-Stop and remove containers and volumes (clean slate):
+This automatically:
+- Downloads all required images
+- Starts PostgreSQL in a container
+- Compiles the Go application inside a container (you don't need Go installed)
+- Initializes the database with test users
+- Exposes the API on port 8080
 
+**4. Stop and clean up:**
 ```bash
 docker-compose down -v
 ```
 
-If you prefer to run only the database for manual testing, you can bring up just the DB:
+### Run Manually (Advanced)
 
+If you prefer to run without Docker:
+
+**1. Setup Database**
 ```bash
-docker-compose up -d db
+psql -U postgres -c "CREATE DATABASE wallet_ledger;"
+psql -U postgres -d wallet_ledger -f migrations/001_init.sql
 ```
 
-Environment variables when running with Docker are set in the `docker-compose.yml`. The app is configured to connect to Postgres at `db:5432`.
+**2. Configure Environment**
+```bash
+cp .env.example .env
+# Edit .env with your database credentials
+```
+
+**3. Run**
+```bash
+go mod download
+go run main.go
+```
 
 
 ## API Endpoints
@@ -395,13 +383,29 @@ Transaction lists use cursor-based pagination (encoded ID + timestamp) for effic
 ### Immutable Transactions
 Once written, transactions cannot be modified. All corrections are new transactions.
 
+### Dual Architecture: Wallet + Transaction Ledger
+The system implements both a **Wallet** (stored balances in users table) and a **Transaction Ledger** (immutable transaction history):
+
+- **Wallet Columns**: Each user has stored columns for `gold_balance`, `sweeps_balance`, `total_gc_wagered`, `total_gc_won`, `total_sc_wagered`, `total_sc_won`, and `total_sc_redeemed` for O(1) reads.
+- **Transaction Ledger**: The `transactions` table provides an immutable audit trail with `balance_after` snapshots for reconciliation.
+- **Atomic Updates**: All balance and statistics updates happen atomically within the same database transaction to guarantee consistency.
+
+This design provides both fast real-time access (wallet) and complete auditability (ledger).
+
 ## Database Schema
 
 ### Users Table
 ```sql
-id          SERIAL PRIMARY KEY
-username    VARCHAR(255) UNIQUE
-created_at  TIMESTAMP
+id                  SERIAL PRIMARY KEY
+username            VARCHAR(255) UNIQUE
+created_at          TIMESTAMP
+gold_balance        BIGINT DEFAULT 0
+sweeps_balance      BIGINT DEFAULT 0
+total_gc_wagered    BIGINT DEFAULT 0
+total_gc_won        BIGINT DEFAULT 0
+total_sc_wagered    BIGINT DEFAULT 0
+total_sc_won        BIGINT DEFAULT 0
+total_sc_redeemed   BIGINT DEFAULT 0
 ```
 
 ### Transactions Table
