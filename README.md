@@ -480,6 +480,17 @@ wallet-ledger/
 4. Click any request and hit **Send**
 5. Use **Collection Runner** to execute all tests sequentially
 
+### Method 1b: Webpage (Browser-Based API Tester)
+
+You can also use the included `test-ui.html` file for quick, browser-based API testing:
+
+1. Open `test-ui.html` in your browser (e.g., Chrome, Edge, Firefox)
+2. The UI lets you select a user, view balances, purchase packages, place wagers, redeem sweep coins, and view transaction history
+3. All API requests are sent directly to your running backend (CORS is enabled)
+4. Use the built-in controls to test all main features without Postman
+
+**Note:** The backend must be running at `http://localhost:8080` for the webpage to work.
+
 ### Method 2: VS Code REST Client
 
 **For developers who prefer staying in the editor:**
