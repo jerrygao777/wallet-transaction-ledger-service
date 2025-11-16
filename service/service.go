@@ -3,16 +3,37 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"wallet-ledger/models"
 	"wallet-ledger/repository"
 )
 
 type WalletService struct {
-	repo *repository.Repository
+	repo      *repository.Repository
+	userLocks sync.Map // map[int]*sync.Mutex - per-user locks
 }
 
 func New(repo *repository.Repository) *WalletService {
-	return &WalletService{repo: repo}
+	return &WalletService{
+		repo:      repo,
+		userLocks: sync.Map{},
+	}
+}
+
+// getUserLock returns the mutex for a specific user
+func (s *WalletService) getUserLock(userID int) *sync.Mutex {
+	lock, _ := s.userLocks.LoadOrStore(userID, &sync.Mutex{})
+	return lock.(*sync.Mutex)
+}
+
+// lockUser acquires the lock for a user, ensuring serial execution
+func (s *WalletService) lockUser(userID int) {
+	s.getUserLock(userID).Lock()
+}
+
+// unlockUser releases the lock for a user
+func (s *WalletService) unlockUser(userID int) {
+	s.getUserLock(userID).Unlock()
 }
 
 // GetUserWithBalances retrieves a user with balances and stats
@@ -33,6 +54,10 @@ func (s *WalletService) ListTransactions(userID int, cursor *string, limit int, 
 
 // Purchase handles purchasing a package with idempotency
 func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey string) ([]*models.Transaction, error) {
+	// Serialize all operations for this user
+	s.lockUser(userID)
+	defer s.unlockUser(userID)
+
 	// Validate package
 	pkg, ok := models.Packages[packageCode]
 	if !ok {
@@ -149,6 +174,10 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 
 // Wager handles a wager with stake and payout
 func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC int64, idempotencyKey string) ([]*models.Transaction, error) {
+	// Serialize all operations for this user
+	s.lockUser(userID)
+	defer s.unlockUser(userID)
+
 	// Validate inputs
 	if stakeGC < 0 || payoutGC < 0 || stakeSC < 0 || payoutSC < 0 {
 		return nil, fmt.Errorf("amounts cannot be negative")
@@ -308,6 +337,10 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 
 // Redeem handles redeeming Sweeps Coins
 func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) (*models.Transaction, error) {
+	// Serialize all operations for this user
+	s.lockUser(userID)
+	defer s.unlockUser(userID)
+
 	if amount <= 0 {
 		return nil, fmt.Errorf("redemption amount must be positive")
 	}

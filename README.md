@@ -361,21 +361,68 @@ All balances and statistics are calculated dynamically from the immutable transa
 
 ```
 handlers/     → HTTP routing, request validation, response formatting
-service/      → Business logic, transaction orchestration
+service/      → Business logic, transaction orchestration, idempotency handling
 repository/   → Database access, query execution
 models/       → Domain types and constants
 ```
+
+### Concurrency Control: User-Level Serialization
+
+**Problem**: Concurrent operations on the same user can cause race conditions and balance inconsistencies.
+
+**Solution**: Per-user request serialization using mutex locks:
+- Each user has their own mutex lock (managed via `sync.Map`)
+- All financial operations (Purchase, Wager, Redeem) acquire the user's lock before execution
+- Requests for the same user are serialized (executed one at a time)
+- Requests for different users run in parallel (no global bottleneck)
+
+**Benefits**:
+- **Eliminates race conditions** - No two requests for same user run concurrently
+- **Simpler code** - No need for constraint violation handling or retry logic
+- **Better reasoning** - Sequential execution matches real-world casino gameplay
+- **Natural backpressure** - Requests queue if user is busy
+- **Prevents balance corruption** - No concurrent balance calculations
+
+**Implementation**:
+```go
+type WalletService struct {
+    repo      *repository.Repository
+    userLocks sync.Map // map[int]*sync.Mutex
+}
+
+func (s *WalletService) Purchase(...) {
+    s.lockUser(userID)
+    defer s.unlockUser(userID)
+    // ... execute operation ...
+}
+```
+
+**Trade-offs**:
+- ✅ Complete race condition elimination
+- ✅ Cleaner, more maintainable code
+- ✅ Easier testing and debugging
+- ⚠️ Adds latency (requests wait in queue)
+- ⚠️ Memory overhead (mutex per active user)
+
+**Why this approach?** Perfect fit for sweepstakes casino:
+- Single server deployment (current Docker setup)
+- User operations are naturally sequential
+- Simple in-memory solution, no external dependencies
+- Idempotency still protects against network retries
 
 ### Key Design Principles
 
 **Idempotency Protection**
 - All financial operations require idempotency keys
 - Duplicate requests return the same transaction data without creating new records
+- Protects against network retries and client-side duplicates
+- Safe to retry on timeout, connection error, or server crash
+- Idempotency key constraint (PRIMARY KEY) ensures no duplicate operations
 - Keys auto-expire after 24 hours
 
 **Atomicity & Consistency**
 - All operations wrapped in database transactions
-- `SELECT FOR UPDATE` prevents race conditions
+- Per-user request serialization eliminates race conditions
 - All-or-nothing guarantee for multi-step operations
 
 **Immutable Ledger**
@@ -411,11 +458,12 @@ created_at    TIMESTAMP
 
 ### Idempotency Keys Table
 ```sql
-key            VARCHAR(255) PRIMARY KEY
-user_id        INTEGER REFERENCES users(id)
-transaction_id INTEGER REFERENCES transactions(id)
-created_at     TIMESTAMP
+key               VARCHAR(255) PRIMARY KEY
+user_id           INTEGER REFERENCES users(id)
+transaction_ids   INTEGER[]
+created_at        TIMESTAMP
 ```
+*Note: `key` is globally unique (PRIMARY KEY), not scoped per user. `transaction_ids` is an array to support operations that create multiple transactions (e.g., purchases create both GC and SC transactions).*
 
 ## Error Handling
 

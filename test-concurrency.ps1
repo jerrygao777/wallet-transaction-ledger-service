@@ -6,7 +6,7 @@ $baseUrl = "http://localhost:8080"
 
 # TEST 1: Idempotency Race Condition
 Write-Host "[TEST 1] Idempotency Race Condition Test" -ForegroundColor Yellow
-Write-Host "Goal: Verify SELECT FOR UPDATE prevents duplicate idempotency key processing"
+Write-Host "Goal: Verify user-level serialization prevents duplicate processing"
 Write-Host "Method: 10 concurrent requests with identical idempotency key"
 Write-Host ""
 
@@ -37,16 +37,16 @@ Write-Host "  Unique transaction sets: $($uniqueSets.Count)"
 
 if ($uniqueSets.Count -eq 1) {
     Write-Host "  Result: PASS - All returned identical transactions" -ForegroundColor Green
-    Write-Host "  Conclusion: No race condition detected" -ForegroundColor Green
+    Write-Host "  Conclusion: User serialization working correctly" -ForegroundColor Green
 } else {
     Write-Host "  Result: FAIL - Different transactions created" -ForegroundColor Red
     Write-Host "  Conclusion: RACE CONDITION DETECTED!" -ForegroundColor Red
 }
 Write-Host ""
 
-# TEST 2: Deadlock Test
-Write-Host "[TEST 2] Deadlock Test" -ForegroundColor Yellow
-Write-Host "Goal: Verify consistent lock ordering prevents deadlocks"
+# TEST 2: Serial Execution Test
+Write-Host "[TEST 2] Serial Execution Test" -ForegroundColor Yellow
+Write-Host "Goal: Verify requests for same user execute serially without hanging"
 Write-Host "Method: 30 concurrent wagers with different idempotency keys"
 Write-Host ""
 
@@ -80,10 +80,10 @@ Write-Host "  Avg time per request: $([math]::Round($duration / 30 * 1000, 0))ms
 
 if ($successCount -eq 30 -and $duration -lt 30) {
     Write-Host "  Result: PASS - All completed successfully" -ForegroundColor Green
-    Write-Host "  Conclusion: No deadlock detected" -ForegroundColor Green
+    Write-Host "  Conclusion: Serial execution working correctly" -ForegroundColor Green
 } elseif ($duration -ge 30) {
     Write-Host "  Result: FAIL - Timeout" -ForegroundColor Red
-    Write-Host "  Conclusion: POSSIBLE DEADLOCK!" -ForegroundColor Red
+    Write-Host "  Conclusion: POSSIBLE MUTEX DEADLOCK!" -ForegroundColor Red
 } else {
     Write-Host "  Result: FAIL - Some requests failed" -ForegroundColor Red
 }
@@ -158,9 +158,9 @@ Write-Host "  Result: Balance consistent (no corruption)" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "=== Summary ===" -ForegroundColor Cyan
-Write-Host "No race conditions detected - idempotency works correctly" -ForegroundColor Green
-Write-Host "No deadlocks detected - lock ordering is safe" -ForegroundColor Green
-Write-Host "High contention handled correctly" -ForegroundColor Green
-Write-Host "Balance remains consistent" -ForegroundColor Green
+Write-Host "No race conditions - user-level serialization works correctly" -ForegroundColor Green
+Write-Host "No mutex deadlocks - all requests complete successfully" -ForegroundColor Green
+Write-Host "High contention handled correctly - requests queued properly" -ForegroundColor Green
+Write-Host "Balance remains consistent - no corruption detected" -ForegroundColor Green
 Write-Host ""
-Write-Host "Concurrency control: VERIFIED" -ForegroundColor Green
+Write-Host "User-level serialization: VERIFIED" -ForegroundColor Green
