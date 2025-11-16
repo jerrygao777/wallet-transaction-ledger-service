@@ -202,6 +202,7 @@ curl -X POST http://localhost:8080/users/1/purchase \
     "created_at": "2025-11-14T10:00:00Z"
   }
 ]
+```
 
 ### Simulate Wager
 
@@ -271,6 +272,7 @@ curl -X POST http://localhost:8080/users/1/wager \
     "created_at": "2025-11-14T10:05:00Z"
   }
 ]
+```
 
 ### Redeem Sweeps Coins
 
@@ -306,6 +308,7 @@ curl -X POST http://localhost:8080/users/1/redeem \
   "balance_after": 0,
   "created_at": "2025-11-14T10:10:00Z"
 }
+```
 
 ## 📋 Example Test Workflow
 
