@@ -2,16 +2,7 @@
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    -- Wallet balances
-    gold_balance BIGINT NOT NULL DEFAULT 0,
-    sweeps_balance BIGINT NOT NULL DEFAULT 0,
-    -- Wallet statistics
-    total_gc_wagered BIGINT NOT NULL DEFAULT 0,
-    total_gc_won BIGINT NOT NULL DEFAULT 0,
-    total_sc_wagered BIGINT NOT NULL DEFAULT 0,
-    total_sc_won BIGINT NOT NULL DEFAULT 0,
-    total_sc_redeemed BIGINT NOT NULL DEFAULT 0
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- Create transactions table

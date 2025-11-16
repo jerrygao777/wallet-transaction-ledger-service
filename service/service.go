@@ -90,13 +90,22 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 		return nil, err
 	}
 
-	// Update wallet balances (GC purchased, SC given as bonus)
-	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, pkg.GoldCoins)
+	// Create SC transaction
+	scBalance, err := s.repo.GetCurrentBalance(tx, userID, models.CurrencySC)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, pkg.SweepCoins)
+	scTx := &models.Transaction{
+		UserID:       userID,
+		Currency:     models.CurrencySC,
+		Type:         models.TransactionTypePurchase,
+		Amount:       pkg.SweepCoins,
+		BalanceAfter: scBalance + pkg.SweepCoins,
+		Metadata:     metadataJSON,
+	}
+
+	err = s.repo.CreateTransaction(tx, scTx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,16 +181,6 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		if err != nil {
 			return err
 		}
-
-		// Update wallet balance and stats
-		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, -stakeGC)
-		if err != nil {
-			return err
-		}
-		err = s.repo.UpdateWalletStat(tx, userID, "total_gc_wagered", stakeGC)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Handle Gold Coins payout (independent of stake)
@@ -199,16 +198,6 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 			BalanceAfter: gcBalance + payoutGC,
 		}
 		err = s.repo.CreateTransaction(tx, winTx)
-		if err != nil {
-			return err
-		}
-
-		// Update wallet balance and stats
-		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencyGC, payoutGC)
-		if err != nil {
-			return err
-		}
-		err = s.repo.UpdateWalletStat(tx, userID, "total_gc_won", payoutGC)
 		if err != nil {
 			return err
 		}
@@ -237,16 +226,6 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 		if err != nil {
 			return err
 		}
-
-		// Update wallet balance and stats
-		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, -stakeSC)
-		if err != nil {
-			return err
-		}
-		err = s.repo.UpdateWalletStat(tx, userID, "total_sc_wagered", stakeSC)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Handle Sweeps Coins payout (independent of stake)
@@ -264,16 +243,6 @@ func (s *WalletService) Wager(userID int, stakeGC, payoutGC, stakeSC, payoutSC i
 			BalanceAfter: scBalance + payoutSC,
 		}
 		err = s.repo.CreateTransaction(tx, winTx)
-		if err != nil {
-			return err
-		}
-
-		// Update wallet balance and stats
-		err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, payoutSC)
-		if err != nil {
-			return err
-		}
-		err = s.repo.UpdateWalletStat(tx, userID, "total_sc_won", payoutSC)
 		if err != nil {
 			return err
 		}
@@ -339,16 +308,6 @@ func (s *WalletService) Redeem(userID int, amount int64, idempotencyKey string) 
 	}
 
 	err = s.repo.CreateTransaction(tx, redeemTx)
-	if err != nil {
-		return err
-	}
-
-	// Update wallet balance and stats
-	err = s.repo.UpdateWalletBalance(tx, userID, models.CurrencySC, -amount)
-	if err != nil {
-		return err
-	}
-	err = s.repo.UpdateWalletStat(tx, userID, "total_sc_redeemed", amount)
 	if err != nil {
 		return err
 	}

@@ -29,32 +29,7 @@ func (r *Repository) BeginTx() (*sql.Tx, error) {
 	return r.db.Begin()
 }
 
-// UpdateWalletBalance updates the balance for a specific currency atomically
-func (r *Repository) UpdateWalletBalance(tx *sql.Tx, userID int, currency models.Currency, delta int64) error {
-	var column string
-	if currency == models.CurrencyGC {
-		column = "gold_balance"
-	} else {
-		column = "sweeps_balance"
-	}
 
-	_, err := tx.Exec(fmt.Sprintf(`
-		UPDATE users
-		SET %s = %s + $1
-		WHERE id = $2
-	`, column, column), delta, userID)
-	return err
-}
-
-// UpdateWalletStat updates a specific wallet statistic atomically
-func (r *Repository) UpdateWalletStat(tx *sql.Tx, userID int, statColumn string, delta int64) error {
-	_, err := tx.Exec(fmt.Sprintf(`
-		UPDATE users
-		SET %s = %s + $1
-		WHERE id = $2
-	`, statColumn, statColumn), delta, userID)
-	return err
-}
 
 // GetUser retrieves a user by ID
 func (r *Repository) GetUser(userID int) (*models.User, error) {
@@ -74,28 +49,14 @@ func (r *Repository) GetUser(userID int) (*models.User, error) {
 	return &user, nil
 }
 
-// GetUserWithBalances retrieves a user with their balances and stats from the wallet
+// GetUserWithBalances retrieves a user with their balances calculated from transactions
 func (r *Repository) GetUserWithBalances(userID int) (*models.UserWithBalances, error) {
 	var result models.UserWithBalances
 	err := r.db.QueryRow(`
-		SELECT id, username, created_at,
-		       gold_balance, sweeps_balance,
-		       total_gc_wagered, total_gc_won,
-		       total_sc_wagered, total_sc_won, total_sc_redeemed
+		SELECT id, username, created_at
 		FROM users
 		WHERE id = $1
-	`, userID).Scan(
-		&result.ID,
-		&result.Username,
-		&result.CreatedAt,
-		&result.GoldBalance,
-		&result.SweepsBalance,
-		&result.TotalGCWagered,
-		&result.TotalGCWon,
-		&result.TotalSCWagered,
-		&result.TotalSCWon,
-		&result.TotalSCRedeemed,
-	)
+	`, userID).Scan(&result.ID, &result.Username, &result.CreatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -104,27 +65,86 @@ func (r *Repository) GetUserWithBalances(userID int) (*models.UserWithBalances, 
 		return nil, err
 	}
 
+	// Calculate balances from transactions
+	var gcBalance, scBalance sql.NullInt64
+	err = r.db.QueryRow(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN currency = 'GC' THEN 
+				CASE 
+					WHEN type IN ('purchase', 'win_gc') THEN amount
+					WHEN type = 'wager_gc' THEN -amount
+				END
+			END), 0) as gc_balance,
+			COALESCE(SUM(CASE WHEN currency = 'SC' THEN 
+				CASE 
+					WHEN type IN ('purchase', 'win_sc') THEN amount
+					WHEN type IN ('wager_sc', 'redeem_sc') THEN -amount
+				END
+			END), 0) as sc_balance
+		FROM transactions
+		WHERE user_id = $1
+	`, userID).Scan(&gcBalance, &scBalance)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if gcBalance.Valid {
+		result.GoldBalance = gcBalance.Int64
+	}
+	if scBalance.Valid {
+		result.SweepsBalance = scBalance.Int64
+	}
+
+	// Calculate statistics from transactions
+	var gcWagered, gcWon, scWagered, scWon, scRedeemed sql.NullInt64
+	err = r.db.QueryRow(`
+		SELECT 
+			COALESCE(SUM(CASE WHEN type = 'wager_gc' THEN amount END), 0) as gc_wagered,
+			COALESCE(SUM(CASE WHEN type = 'win_gc' THEN amount END), 0) as gc_won,
+			COALESCE(SUM(CASE WHEN type = 'wager_sc' THEN amount END), 0) as sc_wagered,
+			COALESCE(SUM(CASE WHEN type = 'win_sc' THEN amount END), 0) as sc_won,
+			COALESCE(SUM(CASE WHEN type = 'redeem_sc' THEN amount END), 0) as sc_redeemed
+		FROM transactions
+		WHERE user_id = $1
+	`, userID).Scan(&gcWagered, &gcWon, &scWagered, &scWon, &scRedeemed)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if gcWagered.Valid {
+		result.TotalGCWagered = gcWagered.Int64
+	}
+	if gcWon.Valid {
+		result.TotalGCWon = gcWon.Int64
+	}
+	if scWagered.Valid {
+		result.TotalSCWagered = scWagered.Int64
+	}
+	if scWon.Valid {
+		result.TotalSCWon = scWon.Int64
+	}
+	if scRedeemed.Valid {
+		result.TotalSCRedeemed = scRedeemed.Int64
+	}
+
 	return &result, nil
 }
 
-// GetCurrentBalance returns the current balance for a user and currency from the wallet
+// GetCurrentBalance returns the current balance for a user and currency from transactions
 func (r *Repository) GetCurrentBalance(tx *sql.Tx, userID int, currency models.Currency) (int64, error) {
 	var balance int64
-	var column string
-	if currency == models.CurrencyGC {
-		column = "gold_balance"
-	} else {
-		column = "sweeps_balance"
-	}
-
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM users
-		WHERE id = $1
+	query := `
+		SELECT COALESCE(balance_after, 0)
+		FROM transactions
+		WHERE user_id = $1 AND currency = $2
+		ORDER BY id DESC
+		LIMIT 1
 		FOR UPDATE
-	`, column)
+	`
 
-	err := tx.QueryRow(query, userID).Scan(&balance)
+	err := tx.QueryRow(query, userID, currency).Scan(&balance)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}

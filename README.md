@@ -13,7 +13,7 @@ A production-ready backend service that manages user wallets for two currencies:
 
 - **Dual Currency System**: Gold Coins (play money) and Sweeps Coins (redeemable)
 - **Immutable Transaction Ledger**: Complete audit trail for all balance changes
-- **Wallet + Ledger Architecture**: Fast O(1) balance reads with maintained aggregates
+- **Transaction-Based Architecture**: All balances and statistics calculated from the ledger
 - **Idempotency Protection**: All financial operations prevent duplicates via idempotency keys
 - **Atomic Operations**: All multi-step operations wrapped in database transactions
 - **Cursor-based Pagination**: Efficient transaction history queries
@@ -294,21 +294,25 @@ All requests are pre-configured in the Postman collection with proper idempotenc
 
 ## 🏗️ Architecture & Design
 
-### Dual Architecture: Wallet + Transaction Ledger
+### Transaction-Based Architecture
 
-The system implements both components implied by its name:
+All balances and statistics are calculated dynamically from the immutable transaction ledger:
 
-**Wallet (users table)** - Fast access to current state:
-- `gold_balance`, `sweeps_balance` - Current balances (O(1) reads)
-- `total_gc_wagered`, `total_gc_won` - Lifetime GC statistics
-- `total_sc_wagered`, `total_sc_won`, `total_sc_redeemed` - Lifetime SC statistics
-
-**Transaction Ledger (transactions table)** - Immutable audit trail:
+**Transaction Ledger (transactions table)** - Single source of truth:
 - Every balance change recorded as a transaction
 - `balance_after` field provides point-in-time snapshots
-- Enables reconciliation and compliance auditing
+- Current balances calculated from latest transaction per currency
+- Statistics aggregated from transaction history
 
-**Atomic Updates**: All wallet and ledger updates occur within the same database transaction, guaranteeing consistency.
+**Calculation Strategy**:
+- Balances: Read `balance_after` from most recent transaction for each currency
+- Statistics: Aggregate `amount` fields filtered by transaction type (wager/win/redeem)
+- All reads executed within database transactions for consistency
+
+**Benefits**:
+- Complete audit trail with no denormalization
+- Simplified code - no balance synchronization logic
+- Guaranteed consistency between balances and ledger
 
 ### Clean Layered Architecture
 
@@ -344,17 +348,11 @@ models/       → Domain types and constants
 
 ### Users Table
 ```sql
-id                  SERIAL PRIMARY KEY
-username            VARCHAR(255) UNIQUE
-created_at          TIMESTAMP
-gold_balance        BIGINT DEFAULT 0
-sweeps_balance      BIGINT DEFAULT 0
-total_gc_wagered    BIGINT DEFAULT 0
-total_gc_won        BIGINT DEFAULT 0
-total_sc_wagered    BIGINT DEFAULT 0
-total_sc_won        BIGINT DEFAULT 0
-total_sc_redeemed   BIGINT DEFAULT 0
+id          SERIAL PRIMARY KEY
+username    VARCHAR(255) UNIQUE
+created_at  TIMESTAMP
 ```
+*Note: Balances and statistics are calculated from the transactions table, not stored here.*
 
 ### Transactions Table
 ```sql
