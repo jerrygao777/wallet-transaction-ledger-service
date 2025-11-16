@@ -1,101 +1,55 @@
 # Wallet and Transaction Ledger Service
 
-A backend service that manages user wallets for two currencies: Gold Coins (GC) and Sweeps Coins (SC). All balance changes are tracked in an immutable transaction ledger with full atomicity guarantees.
-
-## Features
-
-- **Dual Currency System**: Gold Coins (play money) and Sweeps Coins (redeemable)
-- **Immutable Ledger**: All balance changes recorded as transactions
-- **Idempotency Protection**: All financial operations (purchase, wager, redeem) prevent duplicates
-- **Atomic Operations**: All multi-step operations in database transactions
-- **Cursor-based Pagination**: Efficient transaction history queries
-- **Clean Architecture**: Separated layers (handlers → services → repositories)
+A production-ready backend service that manages user wallets for two currencies: Gold Coins (GC) and Sweeps Coins (SC). All balance changes are tracked in an immutable transaction ledger with full atomicity guarantees.
 
 ## Tech Stack
 
 - **Language**: Go 1.21+
 - **Framework**: Chi (lightweight HTTP router)
-- **Database**: PostgreSQL
-- **Driver**: lib/pq
+- **Database**: PostgreSQL 15
+- **Architecture**: Clean layered architecture (handlers → services → repositories)
 
-## Project Structure
+## Key Features
 
-```
-wallet-ledger/
-├── main.go              # Application entry point
-├── models/              # Domain models and types
-│   └── models.go
-├── repository/          # Database access layer
-│   └── repository.go
-├── service/             # Business logic layer
-│   └── service.go
-├── handlers/            # HTTP handlers and routing
-│   └── handlers.go
-├── migrations/          # Database schema
-│   └── 001_init.sql
-├── go.mod               # Go module file
-├── .env.example         # Example environment configuration
-└── README.md
-```
+- **Dual Currency System**: Gold Coins (play money) and Sweeps Coins (redeemable)
+- **Immutable Transaction Ledger**: Complete audit trail for all balance changes
+- **Wallet + Ledger Architecture**: Fast O(1) balance reads with maintained aggregates
+- **Idempotency Protection**: All financial operations prevent duplicates via idempotency keys
+- **Atomic Operations**: All multi-step operations wrapped in database transactions
+- **Cursor-based Pagination**: Efficient transaction history queries
+- **Type-safe Error Handling**: Custom error types with proper error wrapping
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
-**To run this project, you only need:**
-- **Docker Desktop** - [Download here](https://www.docker.com/products/docker-desktop/)
+**All you need:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 
-**That's it!** No need to install Go, PostgreSQL, or any dependencies. Everything runs in containers.
+No Go, PostgreSQL, or other dependencies required - everything runs in containers.
 
-> **Note**: If you prefer running without Docker, see the "Run Manually (Advanced)" section below which requires Go 1.21+ and PostgreSQL 12+.
+### Launch the Application
 
-### Run with Docker (Recommended)
-
-**1. Clone the repository:**
 ```bash
+# Clone the repository
 git clone https://github.com/jerrygao777/wallet-transaction-ledger-service.git
 cd wallet-transaction-ledger-service
-```
 
-**2. Start the application:**
-```bash
+# Start the application
 docker-compose up --build
 ```
 
-**3. Access the API at `http://localhost:8080`**
+The application will:
+- Start PostgreSQL database
+- Run migrations and seed test data (users: alice, bob, charlie)
+- Compile and launch the Go API server
+- Be available at **http://localhost:8080**
 
-This automatically:
-- Downloads all required images
-- Starts PostgreSQL in a container
-- Compiles the Go application inside a container (you don't need Go installed)
-- Initializes the database with test users
-- Exposes the API on port 8080
+### Stop the Application
 
-**4. Stop and clean up:**
 ```bash
+# Stop and remove all containers/volumes
 docker-compose down -v
-```
-
-### Run Manually (Advanced)
-
-If you prefer to run without Docker:
-
-**1. Setup Database**
-```bash
-psql -U postgres -c "CREATE DATABASE wallet_ledger;"
-psql -U postgres -d wallet_ledger -f migrations/001_init.sql
-```
-
-**2. Configure Environment**
-```bash
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-**3. Run**
-```bash
-go mod download
-go run main.go
 ```
 
 
@@ -320,77 +274,71 @@ curl -X POST http://localhost:8080/users/1/redeem \
 }
 ```
 
-## Complete Test Workflow
+## 📋 Example Test Workflow
 
-Here's a complete example workflow:
+**Complete end-to-end test sequence** (available in Postman collection):
 
-```bash
-# 1. Check health
-curl http://localhost:8080/health
+1. **Health Check** - Verify service is running
+2. **Get User** - Check alice's initial state (user ID: 1)
+3. **Purchase Package** - Buy starter_10k (10,000 GC + 10 SC)
+4. **View Balance** - Verify purchase credited correctly
+5. **Place Wager** - Simulate game round (stake 500 GC, win 900 GC)
+6. **View Transactions** - See transaction history with pagination
+7. **Redeem SC** - Convert 5 SC to cash equivalent
+8. **Test Idempotency** - Retry same request, verify no duplicate
+9. **View Final State** - Check all balances and statistics updated
 
-# 2. Check user's initial state
-curl http://localhost:8080/users/1
+All requests are pre-configured in the Postman collection with proper idempotency keys.
 
-# 3. Purchase a starter package
-curl -X POST http://localhost:8080/users/1/purchase \
-  -H "Content-Type: application/json" \
-  -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
+---
 
-# 4. Check updated balance
-curl http://localhost:8080/users/1
-
-# 5. Place a wager with Gold Coins
-curl -X POST http://localhost:8080/users/1/wager \
-  -H "Content-Type: application/json" \
-  -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-001"}'
-
-# 6. View transaction history
-curl "http://localhost:8080/users/1/transactions?limit=10"
-
-# 7. Purchase with Sweeps Coins
-curl -X POST http://localhost:8080/users/1/purchase \
-  -H "Content-Type: application/json" \
-  -d '{"package_code":"grinder_50k","idempotency_key":"purchase-002"}'
-
-# 8. Wager with Sweeps Coins
-curl -X POST http://localhost:8080/users/1/wager \
-  -H "Content-Type: application/json" \
-  -d '{"stake_sc":5,"payout_sc":9,"idempotency_key":"wager-002"}'
-
-# 9. Redeem Sweeps Coins
-curl -X POST http://localhost:8080/users/1/redeem \
-  -H "Content-Type: application/json" \
-  -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
-
-# 10. Check final balances
-curl http://localhost:8080/users/1
-```
-
-## Key Design Decisions
-
-### Ledger-Based Balances
-All balances are calculated from the transaction ledger, not stored separately. The `balance_after` field in each transaction provides a running total for auditing.
-
-### Idempotency
-All financial operations (purchase, wager, redeem) require idempotency keys to prevent duplicate transactions. Submitting the same key returns success without creating duplicates. Keys are automatically cleaned up after 24 hours.
-
-### Atomicity
-All balance-changing operations use database transactions with `SELECT FOR UPDATE` to prevent race conditions and ensure consistency.
-
-### Cursor Pagination
-Transaction lists use cursor-based pagination (encoded ID + timestamp) for efficient queries on large datasets.
-
-### Immutable Transactions
-Once written, transactions cannot be modified. All corrections are new transactions.
+## 🏗️ Architecture & Design
 
 ### Dual Architecture: Wallet + Transaction Ledger
-The system implements both a **Wallet** (stored balances in users table) and a **Transaction Ledger** (immutable transaction history):
 
-- **Wallet Columns**: Each user has stored columns for `gold_balance`, `sweeps_balance`, `total_gc_wagered`, `total_gc_won`, `total_sc_wagered`, `total_sc_won`, and `total_sc_redeemed` for O(1) reads.
-- **Transaction Ledger**: The `transactions` table provides an immutable audit trail with `balance_after` snapshots for reconciliation.
-- **Atomic Updates**: All balance and statistics updates happen atomically within the same database transaction to guarantee consistency.
+The system implements both components implied by its name:
 
-This design provides both fast real-time access (wallet) and complete auditability (ledger).
+**Wallet (users table)** - Fast access to current state:
+- `gold_balance`, `sweeps_balance` - Current balances (O(1) reads)
+- `total_gc_wagered`, `total_gc_won` - Lifetime GC statistics
+- `total_sc_wagered`, `total_sc_won`, `total_sc_redeemed` - Lifetime SC statistics
+
+**Transaction Ledger (transactions table)** - Immutable audit trail:
+- Every balance change recorded as a transaction
+- `balance_after` field provides point-in-time snapshots
+- Enables reconciliation and compliance auditing
+
+**Atomic Updates**: All wallet and ledger updates occur within the same database transaction, guaranteeing consistency.
+
+### Clean Layered Architecture
+
+```
+handlers/     → HTTP routing, request validation, response formatting
+service/      → Business logic, transaction orchestration
+repository/   → Database access, query execution
+models/       → Domain types and constants
+```
+
+### Key Design Principles
+
+**Idempotency Protection**
+- All financial operations require idempotency keys
+- Duplicate requests return success without creating new transactions
+- Keys auto-expire after 24 hours
+
+**Atomicity & Consistency**
+- All operations wrapped in database transactions
+- `SELECT FOR UPDATE` prevents race conditions
+- All-or-nothing guarantee for multi-step operations
+
+**Immutable Ledger**
+- Transactions never modified after creation
+- Corrections are new offsetting transactions
+- Complete audit trail maintained
+
+**Efficient Pagination**
+- Cursor-based pagination (encoded ID + timestamp)
+- Scales to millions of transactions per user
 
 ## Database Schema
 
@@ -444,152 +392,106 @@ Error responses follow this format:
 }
 ```
 
-## Development
+## 📊 Project Structure
 
-### Running Tests
-```bash
-go test ./...
+```
+wallet-ledger/
+├── main.go                    # Entry point, server initialization
+├── handlers/handlers.go       # HTTP routing and request handling
+├── service/service.go         # Business logic and orchestration
+├── service/errors.go          # Custom error types
+├── repository/repository.go   # Database access layer
+├── models/models.go           # Domain types and constants
+├── migrations/001_init.sql    # Database schema
+├── docker-compose.yml         # Container orchestration
+├── Dockerfile                 # Multi-stage Go build
+└── postman-collection.json    # Pre-configured API tests
 ```
 
-### Building
+**Layer Separation Benefits:**
+- Easy unit testing with mock interfaces
+- Clear separation of concerns
+- Maintainable and scalable codebase
+- Database can be swapped without touching business logic
 
-**Linux/macOS:**
-```bash
-go build -o wallet-ledger
-```
+## 🧪 Testing the API
 
-**Windows:**
-```bash
-go build -o wallet-ledger.exe
-```
+### Method 1: Postman (Recommended)
 
-### Database Cleanup (Dev)
-```bash
-# Drop and recreate database
-psql -U postgres -c "DROP DATABASE wallet_ledger;"
-psql -U postgres -c "CREATE DATABASE wallet_ledger;"
-psql -U postgres -d wallet_ledger -f migrations/001_init.sql
-```
+**The easiest way to explore and test all endpoints:**
 
-## Architecture Notes
+1. Download and install [Postman](https://www.postman.com/downloads/)
+2. Import `postman-collection.json` from the project root
+3. All 17 API endpoints will be loaded with pre-configured requests
+4. Click any request and hit **Send**
+5. Use **Collection Runner** to execute all tests sequentially
 
-### Layer Responsibilities
+### Method 2: VS Code REST Client
 
-**Handlers Layer** (`handlers/`)
-- HTTP request/response handling
-- Input validation
-- Error response formatting
-- No business logic
-
-**Service Layer** (`service/`)
-- Business logic and rules
-- Transaction orchestration
-- Multi-step operations
-- Validation of business constraints
-
-**Repository Layer** (`repository/`)
-- Database queries
-- Transaction management
-- Data access patterns
-- No business logic
-
-**Models** (`models/`)
-- Data structures
-- Type definitions
-- Constants
-
-This separation ensures:
-- Easy testing (mock interfaces)
-- Clear responsibilities
-- Maintainable codebase
-- Flexible infrastructure changes
-
-## Testing the API
-
-There are three ways to test the API endpoints. Choose the method that works best for you:
-
-### Option 1: VS Code REST Client (Recommended for Development)
-
-The easiest way to test if you're using VS Code:
+**For developers who prefer staying in the editor:**
 
 1. Install the **REST Client** extension in VS Code
 2. Open `api-requests.http` in the project
 3. Click "Send Request" above any HTTP request
-4. View responses directly in VS Code
+4. View responses inline in VS Code
 
-**Pros:**
-- No additional tools needed
-- Fast and integrated with your editor
-- All requests pre-configured
-- Easy to modify and test
+### Method 3: Command Line Scripts
 
-### Option 2: Postman (Best for GUI Users)
-
-For those who prefer a graphical interface:
-
-1. Download and install [Postman](https://www.postman.com/downloads/)
-2. Import `postman-collection.json` from the project
-3. All 17 API endpoints will be loaded
-4. Click any request and hit "Send"
-5. Use Collection Runner to execute all tests sequentially
-
-**Pros:**
-- User-friendly GUI
-- Great visualization of responses
-- Can save and organize requests
-- Supports automated testing
-
-### Option 3: curl (Best for Command Line)
-
-For terminal/command line testing:
-
-**Linux/Mac/Git Bash:**
-```bash
-# Use the provided script
-bash curl-examples.sh
-
-# Or run individual commands
-curl http://localhost:8080/health
-```
+**For automated testing:**
 
 **Windows PowerShell:**
 ```powershell
-# Test health endpoint
-Invoke-RestMethod -Uri "http://localhost:8080/health"
+# Run the comprehensive test suite (23 tests including idempotency)
+.\test-examples.ps1
 
-# Purchase package
-$body = @{ package_code = "starter_10k"; idempotency_key = "test-001" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:8080/users/1/purchase" -Method Post -Body $body -ContentType "application/json"
+# If you get permission error, run once:
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-**Pros:**
-- No installation needed (built into most systems)
-- Easy to script and automate
-- Works on any platform
-- Can be used in CI/CD pipelines
+**Linux/Mac:**
+```bash
+# Run the provided test script
+bash curl-examples.sh
 
-## Additional Features
+# Or individual requests
+curl http://localhost:8080/health
+curl http://localhost:8080/users/1
+```
 
+## ✨ Additional Features
+
+- **Health Check Endpoint**: Verifies database connectivity
 - **Graceful Shutdown**: Handles SIGINT/SIGTERM signals properly
-- **Background Cleanup**: Automatically cleans up old idempotency keys (24+ hours old) every hour
-- **Connection Pooling**: Configured for optimal database performance
-- **Input Validation**: Currency, transaction type, and limit parameters are validated
-- **Logging**: Request logging middleware for debugging and monitoring
+- **Background Cleanup**: Auto-removes expired idempotency keys (24+ hours old) every hour
+- **Connection Pooling**: Optimized PostgreSQL connection management
+- **Request Logging**: HTTP middleware for debugging and monitoring
+- **Type-safe Errors**: Custom error types with proper wrapping (`errors.Is()` compatible)
 
-## Production Considerations
+## 🚢 Production Deployment Considerations
 
-For production deployment, consider:
-- Add authentication/authorization
-- Implement rate limiting
-- Add monitoring/metrics (Prometheus, Datadog, etc.)
-- Set up structured logging (zerolog, zap)
-- Configure TLS/HTTPS
-- Add health checks for dependencies
+**Security:**
+- Add JWT/OAuth authentication
+- Implement rate limiting per user/IP
+- Configure TLS/HTTPS with valid certificates
+- Enable PostgreSQL SSL connections
+
+**Observability:**
+- Add structured logging (zerolog, zap)
+- Integrate metrics (Prometheus, Datadog)
+- Set up distributed tracing (OpenTelemetry)
+- Configure alerts for errors and performance
+
+**Reliability:**
+- Add database read replicas for scaling
 - Implement circuit breakers for external services
-- Set up automated backups for PostgreSQL
+- Set up automated PostgreSQL backups
 - Add comprehensive unit and integration tests
-- Implement API versioning
+- Implement API versioning (/v1, /v2)
 
-## License
+**Reconciliation:**
+- Scheduled job to verify wallet balances match transaction ledger
+- Alert on discrepancies for investigation
+
+## 📄 License
 
 MIT
