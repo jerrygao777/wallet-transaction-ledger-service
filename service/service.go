@@ -39,6 +39,12 @@ func (s *WalletService) Purchase(userID int, packageCode string, idempotencyKey 
 		return nil, fmt.Errorf("%w: %s", ErrInvalidPackage, packageCode)
 	}
 
+	// Verify package has gold coins (sweepstakes casino requirement)
+	// SC can only be obtained as bonus with GC purchase, not standalone
+	if pkg.GoldCoins == 0 {
+		return nil, fmt.Errorf("%w: package must include gold coins", ErrInvalidPackage)
+	}
+
 	// Verify user exists
 	_, err := s.repo.GetUser(userID)
 	if err != nil {

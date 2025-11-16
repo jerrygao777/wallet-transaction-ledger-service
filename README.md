@@ -12,6 +12,7 @@ A production-ready backend service that manages user wallets for two currencies:
 ## Key Features
 
 - **Dual Currency System**: Gold Coins (play money) and Sweeps Coins (redeemable)
+- **Sweepstakes Casino Compliance**: All purchases require Gold Coins; Sweep Coins awarded as bonus
 - **Immutable Transaction Ledger**: Complete audit trail for all balance changes
 - **Transaction-Based Architecture**: All balances and statistics calculated from the ledger
 - **Idempotency Protection**: All financial operations prevent duplicates via idempotency keys
