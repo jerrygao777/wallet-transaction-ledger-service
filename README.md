@@ -495,7 +495,7 @@ wallet-ledger/
 
 **Windows PowerShell:**
 ```powershell
-# Run the comprehensive test suite (32 tests including idempotency)
+# Run the comprehensive test suite (39 tests including error handling and idempotency)
 .\test-examples.ps1
 
 # If you get permission error, run once:

@@ -438,6 +438,167 @@
       }
     },
     {
+      "name": "Error Test - Insufficient Gold Coins",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 999999999,\n  \"idempotency_key\": \"wager-insufficient-gc\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - Insufficient Sweep Coins",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_sc\": 999999,\n  \"idempotency_key\": \"wager-insufficient-sc\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - Insufficient SC for Redeem",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount_sc\": 999999,\n  \"idempotency_key\": \"redeem-insufficient-sc\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/redeem",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "redeem"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - Negative Gold Coins Amount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": -100,\n  \"idempotency_key\": \"wager-negative-gc\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - Negative Sweep Coins Amount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payout_sc\": -50,\n  \"idempotency_key\": \"wager-negative-sc\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - All Fields Zero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"stake_gc\": 0,\n  \"payout_gc\": 0,\n  \"stake_sc\": 0,\n  \"payout_sc\": 0,\n  \"idempotency_key\": \"wager-all-zero\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/wager",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "wager"]
+        }
+      }
+    },
+    {
+      "name": "Error Test - Negative Redeem Amount",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"amount_sc\": -10,\n  \"idempotency_key\": \"redeem-negative\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/users/1/redeem",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "redeem"]
+        }
+      }
+    },
+    {
       "name": "Test User 2",
       "request": {
         "method": "GET",

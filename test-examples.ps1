@@ -100,65 +100,156 @@ Write-Host "14. Check Balance After Redeem" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/1"
 Write-Host ""
 
+# Error Handling Tests
+Write-Host "=== Error Handling Tests ===" -ForegroundColor Magenta
+Write-Host ""
+
+# Test Insufficient GC
+Write-Host "15. Test Insufficient Gold Coins (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ stake_gc = 999999999; idempotency_key = "wager-insufficient-gc" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test Insufficient SC
+Write-Host "16. Test Insufficient Sweep Coins (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ stake_sc = 999999; idempotency_key = "wager-insufficient-sc" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test Insufficient SC for Redeem
+Write-Host "17. Test Insufficient SC for Redeem (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ amount_sc = 999999; idempotency_key = "redeem-insufficient-sc" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/redeem" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test Negative GC Amount
+Write-Host "18. Test Negative Gold Coins Amount (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ stake_gc = -100; idempotency_key = "wager-negative-gc" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test Negative SC Amount
+Write-Host "19. Test Negative Sweep Coins Amount (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ payout_sc = -50; idempotency_key = "wager-negative-sc" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test All Fields Zero
+Write-Host "20. Test All Fields Zero (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ stake_gc = 0; payout_gc = 0; stake_sc = 0; payout_sc = 0; idempotency_key = "wager-all-zero" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+# Test Negative Redeem Amount
+Write-Host "21. Test Negative Redeem Amount (should fail)" -ForegroundColor Yellow
+try {
+    $body = @{ amount_sc = -10; idempotency_key = "redeem-negative" } | ConvertTo-Json
+    Invoke-RestMethod -Uri "http://localhost:8080/users/1/redeem" -Method Post -Body $body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "FAILED: Should have returned error" -ForegroundColor Red
+} catch {
+    $errorResponse = $_.ErrorDetails.Message | ConvertFrom-Json
+    Write-Host "PASSED: $($errorResponse.error)" -ForegroundColor Green
+}
+Write-Host ""
+
+Write-Host "=== End Error Handling Tests ===" -ForegroundColor Magenta
+Write-Host ""
+
 # List Transactions
-Write-Host "15. List User Transactions (First 10)" -ForegroundColor Yellow
+Write-Host "22. List User Transactions (First 10)" -ForegroundColor Yellow
 $response = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=10"
 $response.items | Format-Table -Property id,type,currency,amount,balance_after
 Write-Host ""
 
 # Test Idempotency - Purchase
-Write-Host "16. Test Idempotency - Purchase Same Key (should return same result)" -ForegroundColor Yellow
+Write-Host "23. Test Idempotency - Purchase Same Key (should return same result)" -ForegroundColor Yellow
 $body = @{ package_code = "starter_10k"; idempotency_key = "purchase-001" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/purchase" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
 
 # Test Idempotency - Wager
-Write-Host "17. Test Idempotency - Wager Same Key (should return same transactions without duplicate)" -ForegroundColor Yellow
+Write-Host "24. Test Idempotency - Wager Same Key (should return same transactions without duplicate)" -ForegroundColor Yellow
 $body = @{ stake_gc = 500; payout_gc = 900; idempotency_key = "wager-gc-win-001" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
 
 # Test Idempotency - Redeem
-Write-Host "18. Test Idempotency - Redeem Same Key (should return same transaction without duplicate)" -ForegroundColor Yellow
+Write-Host "25. Test Idempotency - Redeem Same Key (should return same transaction without duplicate)" -ForegroundColor Yellow
 $body = @{ amount_sc = 10; idempotency_key = "redeem-001" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/redeem" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
 
 # Final Balance Check
-Write-Host "19. Final Balance Check (should be same as step 14)" -ForegroundColor Yellow
+Write-Host "26. Final Balance Check (should be same as step 14)" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/1"
 Write-Host ""
 
 # List Transactions with Filter - Gold Coins Only
-Write-Host "20. List Transactions - Gold Coins Only" -ForegroundColor Yellow
+Write-Host "27. List Transactions - Gold Coins Only" -ForegroundColor Yellow
 $response = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?currency=GC&limit=20"
 $response.items | Format-Table -Property id,type,currency,amount,balance_after
 Write-Host ""
 
 # List Transactions with Filter - Sweeps Coins Only
-Write-Host "21. List Transactions - Sweeps Coins Only" -ForegroundColor Yellow
+Write-Host "28. List Transactions - Sweeps Coins Only" -ForegroundColor Yellow
 $response = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?currency=SC&limit=20"
 $response.items | Format-Table -Property id,type,currency,amount,balance_after
 Write-Host ""
 
 # Test User 2
-Write-Host "22. Get User 2" -ForegroundColor Yellow
+Write-Host "29. Get User 2" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/2"
 Write-Host ""
 
 # Test User 3
-Write-Host "23. Get User 3" -ForegroundColor Yellow
+Write-Host "30. Get User 3" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/3"
 Write-Host ""
 
 # Cursor Pagination Tests
-Write-Host "24. Cursor Pagination - Page 1 (limit 3)" -ForegroundColor Yellow
+Write-Host "31. Cursor Pagination - Page 1 (limit 3)" -ForegroundColor Yellow
 $page1 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3"
 Write-Host "Items: $($page1.items.Count), Next Cursor: $($page1.next_cursor)"
 $page1.items | Format-Table -Property id,type,currency,amount
 Write-Host ""
 
-Write-Host "25. Cursor Pagination - Page 2 (using cursor)" -ForegroundColor Yellow
+Write-Host "32. Cursor Pagination - Page 2 (using cursor)" -ForegroundColor Yellow
 if ($page1.next_cursor) {
     $page2 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3&cursor=$($page1.next_cursor)"
     Write-Host "Items: $($page2.items.Count), Next Cursor: $($page2.next_cursor)"
@@ -166,7 +257,7 @@ if ($page1.next_cursor) {
 }
 Write-Host ""
 
-Write-Host "26. Cursor Pagination - Page 3 (using cursor)" -ForegroundColor Yellow
+Write-Host "33. Cursor Pagination - Page 3 (using cursor)" -ForegroundColor Yellow
 if ($page2.next_cursor) {
     $page3 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3&cursor=$($page2.next_cursor)"
     Write-Host "Items: $($page3.items.Count), Next Cursor: $($page3.next_cursor)"
@@ -174,19 +265,19 @@ if ($page2.next_cursor) {
 }
 Write-Host ""
 
-Write-Host "27. Cursor Pagination with Filter - GC transactions only" -ForegroundColor Yellow
+Write-Host "34. Cursor Pagination with Filter - GC transactions only" -ForegroundColor Yellow
 $gcPage1 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?currency=GC&limit=2"
 Write-Host "GC Page 1 - Items: $($gcPage1.items.Count), Next Cursor: $($gcPage1.next_cursor)"
 $gcPage1.items | Format-Table -Property id,type,currency,amount
 Write-Host ""
 
-Write-Host "28. Cursor Pagination with Filter - Purchase type only" -ForegroundColor Yellow
+Write-Host "35. Cursor Pagination with Filter - Purchase type only" -ForegroundColor Yellow
 $purchasePage = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?type=purchase&limit=2"
 Write-Host "Purchase Page 1 - Items: $($purchasePage.items.Count), Next Cursor: $($purchasePage.next_cursor)"
 $purchasePage.items | Format-Table -Property id,type,currency,amount
 Write-Host ""
 
-Write-Host "29. Verify No Duplicates Across Pages" -ForegroundColor Yellow
+Write-Host "36. Verify No Duplicates Across Pages" -ForegroundColor Yellow
 $allIds = @()
 $cursor = $null
 $pageNum = 1

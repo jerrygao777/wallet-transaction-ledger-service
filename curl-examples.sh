@@ -94,6 +94,41 @@ curl -X POST http://localhost:8080/users/1/redeem \
   -H "Content-Type: application/json" \
   -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
 
+# Error Test - Insufficient Gold Coins (should fail)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"stake_gc":999999999,"idempotency_key":"wager-insufficient-gc"}'
+
+# Error Test - Insufficient Sweep Coins (should fail)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"stake_sc":999999,"idempotency_key":"wager-insufficient-sc"}'
+
+# Error Test - Insufficient SC for Redeem (should fail)
+curl -X POST http://localhost:8080/users/1/redeem \
+  -H "Content-Type: application/json" \
+  -d '{"amount_sc":999999,"idempotency_key":"redeem-insufficient-sc"}'
+
+# Error Test - Negative Gold Coins Amount (should fail)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"stake_gc":-100,"idempotency_key":"wager-negative-gc"}'
+
+# Error Test - Negative Sweep Coins Amount (should fail)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"payout_sc":-50,"idempotency_key":"wager-negative-sc"}'
+
+# Error Test - All Fields Zero (should fail)
+curl -X POST http://localhost:8080/users/1/wager \
+  -H "Content-Type: application/json" \
+  -d '{"stake_gc":0,"payout_gc":0,"stake_sc":0,"payout_sc":0,"idempotency_key":"wager-all-zero"}'
+
+# Error Test - Negative Redeem Amount (should fail)
+curl -X POST http://localhost:8080/users/1/redeem \
+  -H "Content-Type: application/json" \
+  -d '{"amount_sc":-10,"idempotency_key":"redeem-negative"}'
+
 # Test User 2
 curl http://localhost:8080/users/2
 
