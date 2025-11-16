@@ -493,6 +493,17 @@ wallet-ledger/
 
 **For automated testing:**
 
+**Unit Tests:**
+```bash
+# Run Go unit tests for service layer
+go test ./service/... -v
+
+# Run all Go tests
+go test ./... -v
+```
+
+**Integration Tests:**
+
 **Windows PowerShell:**
 ```powershell
 # Run the comprehensive test suite (39 tests including error handling and idempotency)
