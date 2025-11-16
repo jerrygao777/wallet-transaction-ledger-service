@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Transaction Ledger - Test UI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .user-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .user-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .user-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        .user-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .balance-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .balance-row:last-child {
+            margin-bottom: 0;
+        }
+        .balance-label {
+            opacity: 0.9;
+        }
+        .balance-value {
+            font-weight: 700;
+            font-size: 1.3em;
+        }
+        .action-section {
+            margin-bottom: 25px;
+        }
+        .action-section h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-field label {
+            margin-bottom: 4px;
+            font-size: 0.95em;
+        }
+        .input-field input, .input-field select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 1em;
+        }
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            background: #667eea;
+            color: white;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .response-box {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f7fafc;
+            color: #333;
+            font-size: 0.95em;
+            white-space: pre-wrap;
+        }
+        .response-box.success {
+            background: #e6fffa;
+            color: #2c7a7b;
+        }
+        .response-box.error {
+            background: #fff5f5;
+            color: #c53030;
+        }
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .transactions-table th, .transactions-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .transactions-table th {
+            background: #f7fafc;
+            color: #667eea;
+        }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+        .badge-gc {
+            background: #ffe066;
+            color: #b7791f;
+        }
+        .badge-sc {
+            background: #c3e6ff;
+            color: #2b6cb0;
+        }
+        .badge-purchase {
+            background: #e6fffa;
+            color: #2c7a7b;
+        }
+        .badge-wager {
+            background: #fefcbf;
+            color: #b7791f;
+        }
+        .badge-redeem {
+            background: #fff5f5;
+            color: #c53030;
+        }
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Wallet Transaction Ledger</h1>
+            <p>Simple API test UI for wallet transactions</p>
+        </div>
+        <h2>Select User</h2>
+        <div class="user-selector">
+            <button class="user-btn active" onclick="selectUser(1)">User 1 (Alice)</button>
+            <button class="user-btn" onclick="selectUser(2)">User 2 (Bob)</button>
+            <button class="user-btn" onclick="selectUser(3)">User 3 (Charlie)</button>
+        </div>
+        <div class="balance-display" id="balanceDisplay">
+            <div class="balance-row">
+                <span class="balance-label">Gold Coins:</span>
+                <span class="balance-value" id="gcBalance">-</span>
+            </div>
+            <div class="balance-row">
+                <span class="balance-label">Sweep Coins:</span>
+                <span class="balance-value" id="scBalance">-</span>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="refreshBalance()">🔄 Refresh Balance</button>
+        <div class="main-grid">
+            <div class="card">
+                <h2>💳 Purchase Package</h2>
+                <div class="action-section">
+                    <div class="input-field">
+                        <label>Select Package</label>
+                        <select id="packageSelect" title="Select Package">
+                            <option value="starter_10k">Starter Pack - 10,000 GC + 10 SC</option>
+                            <option value="grinder_50k">Grinder Pack - 50,000 GC + 50 SC</option>
+                            <option value="highroller_250k">HighRoller Pack - 250,000 GC + 250 SC</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="purchase()">Purchase Package</button>
+                </div>
+                <div class="response-box" id="purchaseResponse"></div>
+            </div>
+            <div class="card">
+                <h2>🎰 Place Wager</h2>
+                <div class="action-section">
+                    <div class="input-group">
+                        <div class="input-field">
+                            <label>Stake GC</label>
+                            <input type="number" id="stakeGC" placeholder="Gold Coins" min="0">
+                        </div>
+                        <div class="input-field">
+                            <label>Payout GC</label>
+                            <input type="number" id="payoutGC" placeholder="Gold Coins" min="0">
+                        </div>
+                        <div class="input-field">
+                            <label>Stake SC</label>
+                            <input type="number" id="stakeSC" placeholder="Sweep Coins" min="0">
+                        </div>
+                        <div class="input-field">
+                            <label>Payout SC</label>
+                            <input type="number" id="payoutSC" placeholder="Sweep Coins" min="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="wager()">Place Wager</button>
+                </div>
+                <div class="response-box" id="wagerResponse"></div>
+            </div>
+            <div class="card">
+                <h2>🏦 Redeem SC</h2>
+                <div class="action-section">
+                    <div class="input-field">
+                        <label>Amount SC</label>
+                        <input type="number" id="redeemAmount" placeholder="Sweep Coins" min="0">
+                    </div>
+                    <button class="btn btn-primary" onclick="redeem()">Redeem SC</button>
+                </div>
+                <div class="response-box" id="redeemResponse"></div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>📜 Transaction History</h2>
+            <div class="action-section">
+                <label for="txLimit">Page Size</label>
+                <input type="number" id="txLimit" value="20" min="1" max="100" title="Page Size">
+                <button class="btn btn-primary" onclick="loadTransactions(true)">Refresh</button>
+                <button class="btn btn-primary" id="nextBtn" onclick="loadTransactions(false)">Next</button>
+            </div>
+            <div id="transactionsContainer"></div>
+        </div>
+    </div>
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        let currentUser = 1;
+        let requestCounter = 0;
+        let txCursor = null;
+        let prevCursors = [null];
+        let txLimit = 20;
+        function getBadgeClass(type) {
+            if (type === 'purchase') return 'badge-purchase';
+            if (type === 'wager') return 'badge-wager';
+            if (type === 'redeem') return 'badge-redeem';
+            return '';
+        }
+        window.selectUser = function(userId) {
+            currentUser = userId;
+            document.querySelectorAll('.user-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            refreshBalance();
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextBtn) nextBtn.disabled = false;
+            txCursor = null;
+            prevCursors = [null];
+        }
+        window.refreshBalance = async function() {
+            try {
+                const response = await fetch(`${API_BASE}/users/${currentUser}`);
+                const data = await response.json();
+                document.getElementById('gcBalance').textContent = data.gold_balance.toLocaleString();
+                document.getElementById('scBalance').textContent = data.sweeps_balance.toLocaleString();
+            } catch (error) {
+                console.error('Error fetching balance:', error);
+            }
+        }
+        window.generateKey = function() {
+            return `key-${Date.now()}-${++requestCounter}`;
+        }
+        window.loadTransactions = async function(isLoad = false) {
+            const container = document.getElementById('transactionsContainer');
+            const nextBtn = document.getElementById('nextBtn');
+            container.innerHTML = '<div class="loading"></div>';
+            txLimit = parseInt(document.getElementById('txLimit').value) || 20;
+            let url = `${API_BASE}/users/${currentUser}/transactions?limit=${txLimit}`;
+            if (isLoad) {
+                txCursor = null;
+                prevCursors = [null];
+                if (nextBtn) nextBtn.disabled = false;
+            }
+            if (txCursor) {
+                url += `&cursor=${encodeURIComponent(txCursor)}`;
+            }
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (response.ok && Array.isArray(data.items) && data.items.length > 0) {
+                    let html = '<table class="transactions-table"><thead><tr>';
+                    html += '<th>ID</th><th>Type</th><th>Currency</th><th>Amount</th><th>Balance After</th><th>Date</th>';
+                    html += '</tr></thead><tbody>';
+                    data.items.forEach(tx => {
+                        const date = new Date(tx.created_at).toLocaleString();
+                        const typeBadge = getBadgeClass(tx.type);
+                        const currencyBadge = tx.currency === 'GC' ? 'badge-gc' : 'badge-sc';
+                        html += '<tr>';
+                        html += `<td>${tx.id}</td>`;
+                        html += `<td><span class="badge ${typeBadge}">${tx.type}</span></td>`;
+                        html += `<td><span class="badge ${currencyBadge}">${tx.currency}</span></td>`;
+                        html += `<td>${tx.amount.toLocaleString()}</td>`;
+                        html += `<td>${tx.balance_after.toLocaleString()}</td>`;
+                        html += `<td>${date}</td>`;
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                    txCursor = data.next_cursor || null;
+                    if (nextBtn) {
+                        nextBtn.disabled = !txCursor;
+                    }
+                } else {
+                    container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No transactions found</p>';
+                    if (nextBtn) {
+                        nextBtn.disabled = true;
+                    }
+                }
+            } catch (error) {
+                container.innerHTML = `<p style="text-align: center; color: #f56565; padding: 20px;">Error: ${error.message}`;
+                if (nextBtn) {
+                    nextBtn.disabled = true;
+                }
+            }
+        }
+        window.purchase = async function() {
+            const packageCode = document.getElementById('packageSelect').value;
+            const responseBox = document.getElementById('purchaseResponse');
+            responseBox.textContent = 'Processing...';
+            responseBox.className = 'response-box';
+            try {
+                const response = await fetch(`${API_BASE}/users/${currentUser}/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        package_code: packageCode,
+                        idempotency_key: generateKey()
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    responseBox.className = 'response-box success';
+                    responseBox.textContent = JSON.stringify(data, null, 2);
+                    refreshBalance();
+                } else {
+                    responseBox.className = 'response-box error';
+                    responseBox.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                responseBox.className = 'response-box error';
+                responseBox.textContent = `Error: ${error.message}`;
+            }
+        }
+        window.wager = async function() {
+            const stakeGC = parseInt(document.getElementById('stakeGC').value) || 0;
+            const payoutGC = parseInt(document.getElementById('payoutGC').value) || 0;
+            const stakeSC = parseInt(document.getElementById('stakeSC').value) || 0;
+            const payoutSC = parseInt(document.getElementById('payoutSC').value) || 0;
+            const responseBox = document.getElementById('wagerResponse');
+            responseBox.textContent = 'Processing...';
+            responseBox.className = 'response-box';
+            try {
+                const response = await fetch(`${API_BASE}/users/${currentUser}/wager`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stake_gc: stakeGC,
+                        payout_gc: payoutGC,
+                        stake_sc: stakeSC,
+                        payout_sc: payoutSC,
+                        idempotency_key: generateKey()
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    responseBox.className = 'response-box success';
+                    responseBox.textContent = JSON.stringify(data, null, 2);
+                    refreshBalance();
+                } else {
+                    responseBox.className = 'response-box error';
+                    responseBox.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                responseBox.className = 'response-box error';
+                responseBox.textContent = `Error: ${error.message}`;
+            }
+        }
+        window.redeem = async function() {
+            const amount = parseInt(document.getElementById('redeemAmount').value);
+            const responseBox = document.getElementById('redeemResponse');
+            if (!amount || amount <= 0) {
+                responseBox.className = 'response-box error';
+                responseBox.textContent = 'Please enter a valid amount';
+                return;
+            }
+            responseBox.textContent = 'Processing...';
+            responseBox.className = 'response-box';
+            try {
+                const response = await fetch(`${API_BASE}/users/${currentUser}/redeem`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount_sc: amount,
+                        idempotency_key: generateKey()
+                    })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    responseBox.className = 'response-box success';
+                    responseBox.textContent = JSON.stringify(data, null, 2);
+                    refreshBalance();
+                } else {
+                    responseBox.className = 'response-box error';
+                    responseBox.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                responseBox.className = 'response-box error';
+                responseBox.textContent = `Error: ${error.message}`;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshBalance();
+        });
+    </script>
+</body>
+</html>

@@ -263,7 +263,7 @@ func (h *Handler) Redeem(w http.ResponseWriter, r *http.Request) {
 
 // Helper functions
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
 }
@@ -299,6 +299,7 @@ func (h *Handler) SetupRoutes() http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
+	r.Use(corsMiddleware)
 	r.Use(loggingMiddleware)
 
 	// Health check
@@ -317,6 +318,23 @@ func (h *Handler) SetupRoutes() http.Handler {
 	})
 
 	return r
+}
+
+// corsMiddleware adds CORS headers to allow browser access
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // loggingMiddleware logs HTTP requests
