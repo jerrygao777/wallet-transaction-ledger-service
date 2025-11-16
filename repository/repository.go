@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"wallet-ledger/models"
+
+	"github.com/lib/pq"
 )
 
 type Repository struct {
@@ -28,8 +30,6 @@ func (r *Repository) Ping() error {
 func (r *Repository) BeginTx() (*sql.Tx, error) {
 	return r.db.Begin()
 }
-
-
 
 // GetUser retrieves a user by ID
 func (r *Repository) GetUser(userID int) (*models.User, error) {
@@ -153,27 +153,36 @@ func (r *Repository) GetCurrentBalance(tx *sql.Tx, userID int, currency models.C
 
 // CreateTransaction creates a new transaction record
 func (r *Repository) CreateTransaction(tx *sql.Tx, t *models.Transaction) error {
-	metadataBytes, err := json.Marshal(t.Metadata)
-	if err != nil {
-		return err
+	var metadataValue interface{}
+
+	// Only include metadata if it's not nil/empty
+	if len(t.Metadata) > 0 {
+		metadataBytes, err := json.Marshal(t.Metadata)
+		if err != nil {
+			return err
+		}
+		metadataValue = metadataBytes
+	} else {
+		// Use nil for NULL in database
+		metadataValue = nil
 	}
 
 	return tx.QueryRow(`
 		INSERT INTO transactions (user_id, currency, type, amount, balance_after, metadata, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
-	`, t.UserID, t.Currency, t.Type, t.Amount, t.BalanceAfter, metadataBytes, time.Now()).
+	`, t.UserID, t.Currency, t.Type, t.Amount, t.BalanceAfter, metadataValue, time.Now()).
 		Scan(&t.ID, &t.CreatedAt)
 }
 
 // CheckIdempotencyKey checks if an idempotency key was already used
-func (r *Repository) CheckIdempotencyKey(tx *sql.Tx, key string, userID int) (*int, error) {
-	var transactionID int
+func (r *Repository) CheckIdempotencyKey(tx *sql.Tx, key string, userID int) ([]int, error) {
+	var transactionIDs pq.Int64Array
 	err := tx.QueryRow(`
-		SELECT transaction_id 
+		SELECT transaction_ids 
 		FROM idempotency_keys 
 		WHERE key = $1 AND user_id = $2
-	`, key, userID).Scan(&transactionID)
+	`, key, userID).Scan(&transactionIDs)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -181,15 +190,20 @@ func (r *Repository) CheckIdempotencyKey(tx *sql.Tx, key string, userID int) (*i
 	if err != nil {
 		return nil, err
 	}
-	return &transactionID, nil
+	// Convert pq.Int64Array to []int
+	result := make([]int, len(transactionIDs))
+	for i, v := range transactionIDs {
+		result[i] = int(v)
+	}
+	return result, nil
 }
 
 // SaveIdempotencyKey saves an idempotency key
-func (r *Repository) SaveIdempotencyKey(tx *sql.Tx, key string, userID int, transactionID int) error {
+func (r *Repository) SaveIdempotencyKey(tx *sql.Tx, key string, userID int, transactionIDs []int) error {
 	_, err := tx.Exec(`
-		INSERT INTO idempotency_keys (key, user_id, transaction_id, created_at)
+		INSERT INTO idempotency_keys (key, user_id, transaction_ids, created_at)
 		VALUES ($1, $2, $3, $4)
-	`, key, userID, transactionID, time.Now())
+	`, key, userID, pq.Array(transactionIDs), time.Now())
 	return err
 }
 

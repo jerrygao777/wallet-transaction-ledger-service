@@ -95,13 +95,13 @@ Invoke-RestMethod -Uri "http://localhost:8080/users/1/purchase" -Method Post -Bo
 Write-Host ""
 
 # Test Idempotency - Wager
-Write-Host "17. Test Idempotency - Wager Same Key (should return success without duplicate)" -ForegroundColor Yellow
+Write-Host "17. Test Idempotency - Wager Same Key (should return same transactions without duplicate)" -ForegroundColor Yellow
 $body = @{ stake_gc = 500; payout_gc = 900; idempotency_key = "wager-gc-win-001" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/wager" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
 
 # Test Idempotency - Redeem
-Write-Host "18. Test Idempotency - Redeem Same Key (should return success without duplicate)" -ForegroundColor Yellow
+Write-Host "18. Test Idempotency - Redeem Same Key (should return same transaction without duplicate)" -ForegroundColor Yellow
 $body = @{ amount_sc = 10; idempotency_key = "redeem-001" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/users/1/redeem" -Method Post -Body $body -ContentType "application/json"
 Write-Host ""
@@ -131,6 +131,62 @@ Write-Host ""
 # Test User 3
 Write-Host "23. Get User 3" -ForegroundColor Yellow
 Invoke-RestMethod -Uri "http://localhost:8080/users/3"
+Write-Host ""
+
+# Cursor Pagination Tests
+Write-Host "24. Cursor Pagination - Page 1 (limit 3)" -ForegroundColor Yellow
+$page1 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3"
+Write-Host "Items: $($page1.items.Count), Next Cursor: $($page1.next_cursor)"
+$page1.items | Format-Table -Property id,type,currency,amount
+Write-Host ""
+
+Write-Host "25. Cursor Pagination - Page 2 (using cursor)" -ForegroundColor Yellow
+if ($page1.next_cursor) {
+    $page2 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3&cursor=$($page1.next_cursor)"
+    Write-Host "Items: $($page2.items.Count), Next Cursor: $($page2.next_cursor)"
+    $page2.items | Format-Table -Property id,type,currency,amount
+}
+Write-Host ""
+
+Write-Host "26. Cursor Pagination - Page 3 (using cursor)" -ForegroundColor Yellow
+if ($page2.next_cursor) {
+    $page3 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?limit=3&cursor=$($page2.next_cursor)"
+    Write-Host "Items: $($page3.items.Count), Next Cursor: $($page3.next_cursor)"
+    $page3.items | Format-Table -Property id,type,currency,amount
+}
+Write-Host ""
+
+Write-Host "27. Cursor Pagination with Filter - GC transactions only" -ForegroundColor Yellow
+$gcPage1 = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?currency=GC&limit=2"
+Write-Host "GC Page 1 - Items: $($gcPage1.items.Count), Next Cursor: $($gcPage1.next_cursor)"
+$gcPage1.items | Format-Table -Property id,type,currency,amount
+Write-Host ""
+
+Write-Host "28. Cursor Pagination with Filter - Purchase type only" -ForegroundColor Yellow
+$purchasePage = Invoke-RestMethod -Uri "http://localhost:8080/users/1/transactions?type=purchase&limit=2"
+Write-Host "Purchase Page 1 - Items: $($purchasePage.items.Count), Next Cursor: $($purchasePage.next_cursor)"
+$purchasePage.items | Format-Table -Property id,type,currency,amount
+Write-Host ""
+
+Write-Host "29. Verify No Duplicates Across Pages" -ForegroundColor Yellow
+$allIds = @()
+$cursor = $null
+$pageNum = 1
+do {
+    $url = "http://localhost:8080/users/1/transactions?limit=2"
+    if ($cursor) { $url += "&cursor=$cursor" }
+    $page = Invoke-RestMethod -Uri $url
+    Write-Host "Page $pageNum : IDs = $($page.items.id -join ', ')"
+    $allIds += $page.items.id
+    $cursor = $page.next_cursor
+    $pageNum++
+} while ($cursor)
+$duplicates = $allIds | Group-Object | Where-Object { $_.Count -gt 1 }
+if ($duplicates) {
+    Write-Host "FAILED: Found duplicate IDs!" -ForegroundColor Red
+} else {
+    Write-Host "PASSED: No duplicate IDs across all pages" -ForegroundColor Green
+}
 Write-Host ""
 
 Write-Host "=== All Tests Completed ===" -ForegroundColor Green

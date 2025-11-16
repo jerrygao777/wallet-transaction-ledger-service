@@ -1,6 +1,10 @@
 #!/bin/bash
 # API Testing Examples using curl
 # These commands work on Linux, Mac, and Git Bash on Windows
+# Note: For automatic cursor pagination, install jq (JSON processor)
+#   - Mac: brew install jq
+#   - Ubuntu/Debian: sudo apt-get install jq
+#   - Windows: Download from https://stedolan.github.io/jq/
 
 # Health Check
 curl http://localhost:8080/health
@@ -65,12 +69,12 @@ curl -X POST http://localhost:8080/users/1/purchase \
   -H "Content-Type: application/json" \
   -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
 
-# Test Idempotency - Wager Same Key (should return success without duplicate)
+# Test Idempotency - Wager Same Key (should return same transactions without creating duplicates)
 curl -X POST http://localhost:8080/users/1/wager \
   -H "Content-Type: application/json" \
   -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-gc-win-001"}'
 
-# Test Idempotency - Redeem Same Key (should return success without duplicate)
+# Test Idempotency - Redeem Same Key (should return same transaction without creating duplicate)
 curl -X POST http://localhost:8080/users/1/redeem \
   -H "Content-Type: application/json" \
   -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
@@ -80,3 +84,49 @@ curl http://localhost:8080/users/2
 
 # Test User 3
 curl http://localhost:8080/users/3
+
+# Cursor Pagination - Page 1 (limit 3) - Automatic cursor extraction
+echo "Fetching Page 1..."
+RESPONSE=$(curl -s "http://localhost:8080/users/1/transactions?limit=3")
+echo "$RESPONSE" | jq .
+NEXT_CURSOR=$(echo "$RESPONSE" | jq -r '.next_cursor // empty')
+
+# Cursor Pagination - Page 2 (automatically uses cursor from Page 1)
+if [ -n "$NEXT_CURSOR" ]; then
+  echo -e "\nFetching Page 2 with cursor: $NEXT_CURSOR"
+  curl -s "http://localhost:8080/users/1/transactions?limit=3&cursor=$NEXT_CURSOR" | jq .
+else
+  echo "No next_cursor found (last page)"
+fi
+
+# Cursor Pagination with Filter - GC transactions only
+echo -e "\nFetching GC transactions (Page 1)..."
+GC_RESPONSE=$(curl -s "http://localhost:8080/users/1/transactions?currency=GC&limit=2")
+echo "$GC_RESPONSE" | jq .
+GC_CURSOR=$(echo "$GC_RESPONSE" | jq -r '.next_cursor // empty')
+if [ -n "$GC_CURSOR" ]; then
+  echo "Next GC page cursor: $GC_CURSOR"
+fi
+
+# Cursor Pagination with Filter - Purchase type only
+echo -e "\nFetching Purchase transactions (Page 1)..."
+PURCHASE_RESPONSE=$(curl -s "http://localhost:8080/users/1/transactions?type=purchase&limit=2")
+echo "$PURCHASE_RESPONSE" | jq .
+PURCHASE_CURSOR=$(echo "$PURCHASE_RESPONSE" | jq -r '.next_cursor // empty')
+if [ -n "$PURCHASE_CURSOR" ]; then
+  echo "Next Purchase page cursor: $PURCHASE_CURSOR"
+fi
+
+# Cursor Pagination with Combined Filters - Purchase + SC (Page 1)
+echo -e "\nFetching Purchase + SC transactions (Page 1)..."
+COMBINED_RESPONSE=$(curl -s "http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1")
+echo "$COMBINED_RESPONSE" | jq .
+COMBINED_CURSOR=$(echo "$COMBINED_RESPONSE" | jq -r '.next_cursor // empty')
+
+# Cursor Pagination - Navigate to next page with combined filters (automatic)
+if [ -n "$COMBINED_CURSOR" ]; then
+  echo -e "\nFetching Purchase + SC transactions (Page 2) with cursor: $COMBINED_CURSOR"
+  curl -s "http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1&cursor=$COMBINED_CURSOR" | jq .
+else
+  echo "No next_cursor found (last page)"
+fi

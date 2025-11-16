@@ -21,7 +21,7 @@ CREATE TABLE transactions (
 CREATE TABLE idempotency_keys (
     key VARCHAR(255) PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id),
-    transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+    transaction_ids INTEGER[] NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

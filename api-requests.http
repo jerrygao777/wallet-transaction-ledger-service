@@ -163,3 +163,51 @@ GET http://localhost:8080/users/2
 GET http://localhost:8080/users/3
 
 ###
+
+### Cursor Pagination - Page 1 (limit 3)
+# @name page1
+GET http://localhost:8080/users/1/transactions?limit=3
+
+###
+
+### Cursor Pagination - Page 2 (automatic: uses cursor from Page 1)
+# Run "Cursor Pagination - Page 1" request first, then this will automatically use the cursor
+GET http://localhost:8080/users/1/transactions?limit=3&cursor={{page1.response.body.next_cursor}}
+
+###
+
+### Cursor Pagination with Filter - GC transactions only (Page 1)
+# @name gcPage1
+GET http://localhost:8080/users/1/transactions?currency=GC&limit=2
+
+###
+
+### Cursor Pagination with Filter - GC transactions only (Page 2)
+# Automatically uses cursor from GC Page 1
+GET http://localhost:8080/users/1/transactions?currency=GC&limit=2&cursor={{gcPage1.response.body.next_cursor}}
+
+###
+
+### Cursor Pagination with Filter - Purchase type only (Page 1)
+# @name purchasePage1
+GET http://localhost:8080/users/1/transactions?type=purchase&limit=2
+
+###
+
+### Cursor Pagination with Filter - Purchase type only (Page 2)
+# Automatically uses cursor from Purchase Page 1
+GET http://localhost:8080/users/1/transactions?type=purchase&limit=2&cursor={{purchasePage1.response.body.next_cursor}}
+
+###
+
+### Cursor Pagination with Combined Filters - Purchase + SC (Page 1)
+# @name combinedPage1
+GET http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1
+
+###
+
+### Cursor Pagination with Combined Filters - Purchase + SC (Page 2)
+# Automatically uses cursor from Combined Page 1
+GET http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1&cursor={{combinedPage1.response.body.next_cursor}}
+
+###

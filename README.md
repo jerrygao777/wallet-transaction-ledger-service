@@ -177,18 +177,33 @@ curl -X POST http://localhost:8080/users/1/purchase \
   -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
 ```
 
-**Response:**
+**Response (array of created transactions):**
 ```json
-{
-  "id": 1,
-  "user_id": 1,
-  "currency": "GC",
-  "type": "purchase",
-  "amount": 10000,
-  "balance_after": 10000,
-  "created_at": "2025-11-14T10:00:00Z"
-}
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "currency": "GC",
+    "type": "purchase",
+    "amount": 10000,
+    "balance_after": 10000,
+    "metadata": {"package_code": "starter_10k"},
+    "created_at": "2025-11-14T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "user_id": 1,
+    "currency": "SC",
+    "type": "purchase",
+    "amount": 10,
+    "balance_after": 10,
+    "metadata": {"package_code": "starter_10k"},
+    "created_at": "2025-11-14T10:00:00Z"
+  }
+]
 ```
+
+**Note:** Returns an array of all transactions created (one for GC, one for SC if package includes both).
 
 ### Simulate Wager
 
@@ -237,12 +252,31 @@ curl -X POST http://localhost:8080/users/1/wager \
   -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-001"}'
 ```
 
-**Response:**
+**Response (array of created transactions):**
 ```json
-{
-  "status": "success"
-}
+[
+  {
+    "id": 3,
+    "user_id": 1,
+    "currency": "GC",
+    "type": "wager_gc",
+    "amount": 500,
+    "balance_after": 9500,
+    "created_at": "2025-11-14T10:05:00Z"
+  },
+  {
+    "id": 4,
+    "user_id": 1,
+    "currency": "GC",
+    "type": "win_gc",
+    "amount": 900,
+    "balance_after": 10400,
+    "created_at": "2025-11-14T10:05:00Z"
+  }
+]
 ```
+
+**Note:** Returns an array of all transactions created (stake and/or payout transactions for GC and/or SC).
 
 ### Redeem Sweeps Coins
 
@@ -267,12 +301,20 @@ curl -X POST http://localhost:8080/users/1/redeem \
   -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
 ```
 
-**Response:**
+**Response (redemption transaction):**
 ```json
 {
-  "status": "success"
+  "id": 5,
+  "user_id": 1,
+  "currency": "SC",
+  "type": "redeem_sc",
+  "amount": 10,
+  "balance_after": 0,
+  "created_at": "2025-11-14T10:10:00Z"
 }
 ```
+
+**Note:** Returns the redemption transaction object with the resulting balance.
 
 ## 📋 Example Test Workflow
 
@@ -327,7 +369,7 @@ models/       → Domain types and constants
 
 **Idempotency Protection**
 - All financial operations require idempotency keys
-- Duplicate requests return success without creating new transactions
+- Duplicate requests return the same transaction data without creating new records
 - Keys auto-expire after 24 hours
 
 **Atomicity & Consistency**

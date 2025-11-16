@@ -167,7 +167,7 @@ func (h *Handler) Purchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	transaction, err := h.service.Purchase(userID, req.PackageCode, req.IdempotencyKey)
+	transactions, err := h.service.Purchase(userID, req.PackageCode, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing purchase: %v", err)
 
@@ -181,7 +181,7 @@ func (h *Handler) Purchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, transaction)
+	respondJSON(w, http.StatusOK, transactions)
 }
 
 // Wager handles POST /users/:id/wager
@@ -203,7 +203,7 @@ func (h *Handler) Wager(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Wager(userID, req.StakeGC, req.PayoutGC, req.StakeSC, req.PayoutSC, req.IdempotencyKey)
+	transactions, err := h.service.Wager(userID, req.StakeGC, req.PayoutGC, req.StakeSC, req.PayoutSC, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing wager: %v", err)
 
@@ -217,7 +217,7 @@ func (h *Handler) Wager(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]string{"status": "success"})
+	respondJSON(w, http.StatusOK, transactions)
 }
 
 // Redeem handles POST /users/:id/redeem
@@ -244,7 +244,7 @@ func (h *Handler) Redeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.Redeem(userID, req.AmountSC, req.IdempotencyKey)
+	transaction, err := h.service.Redeem(userID, req.AmountSC, req.IdempotencyKey)
 	if err != nil {
 		log.Printf("Error processing redemption: %v", err)
 
@@ -258,7 +258,7 @@ func (h *Handler) Redeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, map[string]string{"status": "success"})
+	respondJSON(w, http.StatusOK, transaction)
 }
 
 // Helper functions

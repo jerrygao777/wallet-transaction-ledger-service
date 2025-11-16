@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Wallet Ledger API",
-    "description": "API endpoints for testing the Wallet Transaction Ledger System",
+    "description": "API endpoints for testing the Wallet Transaction Ledger System.\n\n**Cursor Pagination**: The pagination requests automatically save the `next_cursor` from responses. Just run \"Page 1\" requests first, then \"Page 2\" requests will use the saved cursor automatically. Check the Postman Console (View > Show Postman Console) to see extracted cursor values.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -409,6 +409,275 @@
           "path": ["users", "1"]
         }
       }
+    },
+    {
+      "name": "Cursor Pagination - Page 1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?limit=3",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "3"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor Pagination - Page 2",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?limit=3&cursor={{next_cursor}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "3"
+            },
+            {
+              "key": "cursor",
+              "value": "{{next_cursor}}",
+              "description": "Automatically populated from Page 1 response"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor Pagination with Filter - GC Only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?currency=GC&limit=2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "currency",
+              "value": "GC"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor Pagination with Filter - Purchase Only",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?type=purchase&limit=2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor Pagination - Combined Filters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "currency",
+              "value": "SC"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cursor Pagination - Combined Filters Page 2",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/users/1/transactions?type=purchase&currency=SC&limit=1&cursor={{next_cursor}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["users", "1", "transactions"],
+          "query": [
+            {
+              "key": "type",
+              "value": "purchase"
+            },
+            {
+              "key": "currency",
+              "value": "SC"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "cursor",
+              "value": "{{next_cursor}}",
+              "description": "Paste next_cursor value from previous response"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Automatically extract and save next_cursor for subsequent requests",
+              "const response = pm.response.json();",
+              "if (response.next_cursor) {",
+              "    pm.collectionVariables.set('next_cursor', response.next_cursor);",
+              "    console.log('Saved next_cursor:', response.next_cursor);",
+              "} else {",
+              "    console.log('No next_cursor in response (last page)');",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "next_cursor",
+      "value": "",
+      "type": "string"
     }
   ]
 }
