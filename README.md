@@ -545,7 +545,13 @@ You can inspect the database directly using Docker Desktop or command line:
 # View recent transactions
 SELECT * FROM transactions ORDER BY id DESC LIMIT 10;
 
-# Check user balances
+# Check current balances (from latest transaction per currency)
+SELECT DISTINCT ON (user_id, currency) 
+  user_id, currency, balance_after 
+FROM transactions 
+ORDER BY user_id, currency, id DESC;
+
+# Check user info
 SELECT * FROM users;
 
 # View idempotency keys
