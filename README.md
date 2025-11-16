@@ -178,7 +178,7 @@ curl -X POST http://localhost:8080/users/1/purchase \
   -d '{"package_code":"starter_10k","idempotency_key":"purchase-001"}'
 ```
 
-**Response (array of created transactions):**
+**Response:**
 ```json
 [
   {
@@ -202,9 +202,6 @@ curl -X POST http://localhost:8080/users/1/purchase \
     "created_at": "2025-11-14T10:00:00Z"
   }
 ]
-```
-
-**Note:** Returns an array of all transactions created (one for GC, one for SC if package includes both).
 
 ### Simulate Wager
 
@@ -238,13 +235,12 @@ Or payout only:
 }
 ```
 
-Or any combination of the four fields. The endpoint supports maximum flexibility:
-- Stake only (user places bet)
-- Payout only (user receives winnings)
-- Both stake and payout (complete round)
-- All four fields (complex multi-currency settlement)
+**Supported Scenarios:**
+- Stake only, payout only, or both
+- Single currency or multi-currency settlements
+- Any combination of the four fields
 
-**Note**: `idempotency_key` is required to prevent duplicate wagers.
+**Note:** `idempotency_key` is required.
 
 **Example:**
 ```bash
@@ -253,7 +249,7 @@ curl -X POST http://localhost:8080/users/1/wager \
   -d '{"stake_gc":500,"payout_gc":900,"idempotency_key":"wager-001"}'
 ```
 
-**Response (array of created transactions):**
+**Response:**
 ```json
 [
   {
@@ -275,9 +271,6 @@ curl -X POST http://localhost:8080/users/1/wager \
     "created_at": "2025-11-14T10:05:00Z"
   }
 ]
-```
-
-**Note:** Returns an array of all transactions created (stake and/or payout transactions for GC and/or SC).
 
 ### Redeem Sweeps Coins
 
@@ -293,7 +286,7 @@ POST /users/:id/redeem
 }
 ```
 
-**Note**: `idempotency_key` is required to prevent duplicate redemptions.
+**Note:** `idempotency_key` is required.
 
 **Example:**
 ```bash
@@ -302,7 +295,7 @@ curl -X POST http://localhost:8080/users/1/redeem \
   -d '{"amount_sc":10,"idempotency_key":"redeem-001"}'
 ```
 
-**Response (redemption transaction):**
+**Response:**
 ```json
 {
   "id": 5,
@@ -313,9 +306,6 @@ curl -X POST http://localhost:8080/users/1/redeem \
   "balance_after": 0,
   "created_at": "2025-11-14T10:10:00Z"
 }
-```
-
-**Note:** Returns the redemption transaction object with the resulting balance.
 
 ## 📋 Example Test Workflow
 
@@ -383,41 +373,13 @@ models/       → Domain types and constants
 - **Natural backpressure** - Requests queue if user is busy
 - **Prevents balance corruption** - No concurrent balance calculations
 
-**Implementation**:
-```go
-type WalletService struct {
-    repo      *repository.Repository
-    userLocks sync.Map // map[int]*sync.Mutex
-}
-
-func (s *WalletService) Purchase(...) {
-    s.lockUser(userID)
-    defer s.unlockUser(userID)
-    // ... execute operation ...
-}
-```
-
-**Trade-offs**:
-- ✅ Complete race condition elimination
-- ✅ Cleaner, more maintainable code
-- ✅ Easier testing and debugging
-- ⚠️ Adds latency (requests wait in queue)
-- ⚠️ Memory overhead (mutex per active user)
-
-**Why this approach?** Perfect fit for sweepstakes casino:
-- Single server deployment (current Docker setup)
-- User operations are naturally sequential
-- Simple in-memory solution, no external dependencies
-- Idempotency still protects against network retries
-
 ### Key Design Principles
 
 **Idempotency Protection**
-- All financial operations require idempotency keys
-- Duplicate requests return the same transaction data without creating new records
-- Protects against network retries and client-side duplicates
+- All financial operations require unique idempotency keys
+- Duplicate requests return original transactions without creating new records
 - Safe to retry on timeout, connection error, or server crash
-- Idempotency key constraint (PRIMARY KEY) ensures no duplicate operations
+- PRIMARY KEY constraint prevents duplicate operations at database level
 - Keys auto-expire after 24 hours
 
 **Atomicity & Consistency**
@@ -463,7 +425,7 @@ user_id           INTEGER REFERENCES users(id)
 transaction_ids   INTEGER[]
 created_at        TIMESTAMP
 ```
-*Note: `key` is globally unique (PRIMARY KEY), not scoped per user. `transaction_ids` is an array to support operations that create multiple transactions (e.g., purchases create both GC and SC transactions).*
+*Note: `key` is globally unique. `transaction_ids` supports multi-transaction operations (e.g., purchases).*
 
 ## Error Handling
 
@@ -601,32 +563,3 @@ GROUP BY currency, type;
 # From your terminal (not in Docker)
 docker exec -it wtls-db-1 psql -U postgres -d wallet_ledger -c "SELECT * FROM transactions LIMIT 5;"
 ```
-
-## 🚢 Production Deployment Considerations
-
-**Security:**
-- Add JWT/OAuth authentication
-- Implement rate limiting per user/IP
-- Configure TLS/HTTPS with valid certificates
-- Enable PostgreSQL SSL connections
-
-**Observability:**
-- Add structured logging (zerolog, zap)
-- Integrate metrics (Prometheus, Datadog)
-- Set up distributed tracing (OpenTelemetry)
-- Configure alerts for errors and performance
-
-**Reliability:**
-- Add database read replicas for scaling
-- Implement circuit breakers for external services
-- Set up automated PostgreSQL backups
-- Add comprehensive unit and integration tests
-- Implement API versioning (/v1, /v2)
-
-**Reconciliation:**
-- Scheduled job to verify wallet balances match transaction ledger
-- Alert on discrepancies for investigation
-
-## 📄 License
-
-MIT
