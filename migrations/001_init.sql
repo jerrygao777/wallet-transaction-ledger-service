@@ -26,11 +26,22 @@ CREATE TABLE idempotency_keys (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_user_currency ON transactions(user_id, currency);
+-- Composite index for GetCurrentBalance query (most frequently called in every transaction)
+CREATE INDEX idx_transactions_user_currency_id ON transactions(user_id, currency, id DESC);
+
+-- Composite index for ListTransactions pagination (covers most common queries)
 CREATE INDEX idx_transactions_user_created ON transactions(user_id, created_at DESC, id DESC);
-CREATE INDEX idx_transactions_type ON transactions(type);
+
+-- Composite indexes for filtered ListTransactions queries
+CREATE INDEX idx_transactions_user_type_created ON transactions(user_id, type, created_at DESC, id DESC);
+CREATE INDEX idx_transactions_user_currency_created ON transactions(user_id, currency, created_at DESC, id DESC);
+
+-- Index for idempotency key cleanup job
 CREATE INDEX idx_idempotency_created_at ON idempotency_keys(created_at);
+
+-- Note: No separate index on user_id alone needed - covered by composite indexes above
+-- Note: idempotency_keys.key already has index via PRIMARY KEY
+-- Note: idempotency_keys.user_id doesn't need separate index (lookups always by key first)
 
 -- Insert sample users for testing
 INSERT INTO users (username) VALUES 
