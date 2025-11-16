@@ -508,6 +508,52 @@ curl http://localhost:8080/users/1
 - **Request Logging**: HTTP middleware for debugging and monitoring
 - **Type-safe Errors**: Custom error types with proper wrapping (`errors.Is()` compatible)
 
+## 🔍 Database Inspection
+
+You can inspect the database directly using Docker Desktop or command line:
+
+**Using Docker Desktop:**
+1. Open Docker Desktop
+2. Click on `wtls-db-1` container
+3. Go to "Exec" tab
+4. Run: `psql -U postgres -d wallet_ledger`
+
+**Common PostgreSQL Commands:**
+
+```bash
+# List all tables
+\dt
+
+# Describe table structure
+\d users
+\d transactions
+\d idempotency_keys
+
+# View recent transactions
+SELECT * FROM transactions ORDER BY id DESC LIMIT 10;
+
+# Check user balances
+SELECT * FROM users;
+
+# View idempotency keys
+SELECT key, user_id, transaction_ids, created_at FROM idempotency_keys;
+
+# Aggregate statistics
+SELECT currency, type, COUNT(*), SUM(amount) 
+FROM transactions 
+GROUP BY currency, type;
+
+# Exit psql
+\q
+```
+
+**Using Command Line:**
+
+```bash
+# From your terminal (not in Docker)
+docker exec -it wtls-db-1 psql -U postgres -d wallet_ledger -c "SELECT * FROM transactions LIMIT 5;"
+```
+
 ## 🚢 Production Deployment Considerations
 
 **Security:**
